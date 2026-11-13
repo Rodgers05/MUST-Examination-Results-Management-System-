@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import type { Profile } from '@/lib/auth'
@@ -17,20 +18,33 @@ function WorkspaceLinks({ profile }: { profile: Profile }) {
   </>
 }
 
-export function MustBrand({ subtitle = 'Examination Results Management System' }: { subtitle?: string }) {
-  return <Link className="brand" href="/" aria-label="Mbarara University of Science and Technology home">
-    <span className="brand-mark" aria-hidden="true">MUST</span>
-    <span className="brand-text"><strong>Mbarara University of Science and Technology</strong><small>{subtitle}</small></span>
-  </Link>
-}
+export function MustBrand({
+  subtitle = 'Examination Results Management System',
+}: {
+  subtitle?: string
+}) {
+  return (
+    <Link
+      className="brand"
+      href="/"
+      aria-label="Mbarara University of Science and Technology home"
+    >
+      <Image
+        src="/images/campus_logo.jpg"
+        alt="Mbarara University of Science and Technology logo"
+        width={58}
+        height={58}
+        priority
+        className="brand-logo"
+      />
 
-export function PortalHeader({ nav = false }: { nav?: boolean }) {
-  return <header className="site-header"><MustBrand />{nav && <nav className="main-nav" aria-label="Main navigation">
-    <Link href="/login">Sign in</Link><Link href="/register">Student registration</Link>
-    <a href="https://www.must.ac.ug/" target="_blank" rel="noopener noreferrer">University website</a>
-  </nav>}</header>
+      <span className="brand-text">
+        <strong>Mbarara University of Science and Technology</strong>
+        <small>{subtitle}</small>
+      </span>
+    </Link>
+  )
 }
-
 export function PortalFooter() {
   return <footer className="site-footer"><strong>Mbarara University of Science and Technology</strong><span>Secure examination services</span><a href="https://www.must.ac.ug/" target="_blank" rel="noopener noreferrer">must.ac.ug</a></footer>
 }
