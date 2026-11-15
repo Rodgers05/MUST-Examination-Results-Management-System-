@@ -63,7 +63,21 @@ export async function login(formData: FormData) {
 
   const supabase = await createClient()
   const { error } = await supabase.auth.signInWithPassword({ email, password })
-  if (error) note('/login', 'Sign-in failed. Check your email and password, and verify your email address.')
+  if (error) {
+    if (error.code === 'email_not_confirmed') {
+      note('/login', 'Your email address has not been verified. Open the confirmation email and follow its link. If you never received it, use the resend option on the registration page.')
+    }
+    if (error.code === 'user_banned') {
+      note('/login', 'This account is currently suspended. Contact the examinations administrator.')
+    }
+    if (error.code === 'too_many_requests') {
+      note('/login', 'Too many sign-in attempts. Wait a few minutes and try again.')
+    }
+    if (error.code === 'invalid_credentials') {
+      note('/login', 'We could not sign you in. Check your email and password. If this is your first visit, create an account first. A failed registration caused by email-delivery problems will not create a usable login.')
+    }
+    note('/login', 'The authentication service could not complete sign-in. Please try again shortly or contact the system administrator.')
+  }
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user?.email_confirmed_at) {
