@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
-import { isValidEmail, hasRole, validateBatchMarks } from '../lib/validation.mjs'
+import { isValidEmail, isValidPassword, hasRole, validateBatchMarks } from '../lib/validation.mjs'
 import { resolveAuthOrigin } from '../lib/request-origin.mjs'
 import { safeAppPath } from '../lib/redirects.mjs'
 import { getStatusAppearance } from '../lib/status.mjs'
@@ -39,6 +39,15 @@ test('email validation accepts any normal email domain and rejects malformed add
   }
   for (const email of ['', 'person', 'person@', '@gmail.com', 'person gmail@gmail.com', 'person@gmail', 'a'.repeat(250) + '@gmail.com']) {
     assert.equal(isValidEmail(email), false, email)
+  }
+})
+
+test('password validation matches the configured Supabase password policy', () => {
+  for (const password of ['StrongPassword123', 'MUSTresults2026', 'A'.repeat(11) + 'a1']) {
+    assert.equal(isValidPassword(password), true, password)
+  }
+  for (const password of ['', 'shortA1', 'lowercasepassword1', 'UPPERCASEPASSWORD1', 'NoDigitsPassword', 'Short1A']) {
+    assert.equal(isValidPassword(password), false, password)
   }
 })
 
