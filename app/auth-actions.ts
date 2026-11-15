@@ -25,6 +25,12 @@ function emailDeliveryFailure(error: { message?: string; code?: string }) {
   if (detail.includes('535') || detail.includes('authentication credentials invalid')) {
     return 'Confirmation email delivery is misconfigured. The administrator must update the SMTP username and API-key password in Supabase Authentication settings.'
   }
+  if (error.code === 'unexpected_failure') {
+    return 'Your account could not be created because the confirmation email service rejected the message. Resend is still in testing mode: the administrator must verify a sending domain in Resend and set the Supabase SMTP sender address to an address on that verified domain. No usable account has been created; please try again after the email service is fixed.'
+  }
+  if (error.code === 'over_email_send_rate_limit' || detail.includes('rate limit')) {
+    return 'Too many confirmation emails have been requested. Wait a few minutes before trying again.'
+  }
   return 'We could not send a confirmation email. Check the email service configuration or contact the system administrator.'
 }
 
