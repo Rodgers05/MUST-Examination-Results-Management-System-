@@ -390,3 +390,95 @@ tbody tr:hover { background: #f7f9fd; }
 @media(prefers-reduced-motion:reduce) {
   .stat, .side-nav a, button, .button { transition: none; }
 }
+
+
+/* Artistic MUST campus atmosphere: subtle geometry, institutional blues and gold. */
+body {
+  background:
+    radial-gradient(ellipse at 8% 12%, rgba(36,74,152,.075), transparent 30rem),
+    radial-gradient(ellipse at 92% 78%, rgba(252,185,0,.075), transparent 27rem),
+    linear-gradient(135deg, #f7f9fd 0%, #eef3fb 52%, #f8f9fc 100%);
+  background-attachment: fixed;
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: .22;
+  background-image:
+    linear-gradient(rgba(16,38,95,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(16,38,95,.035) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(to bottom, black, transparent 78%);
+}
+.dashboard-shell {
+  background:
+    radial-gradient(ellipse at 94% 8%, rgba(252,185,0,.10), transparent 25rem),
+    radial-gradient(ellipse at 12% 82%, rgba(36,74,152,.075), transparent 30rem),
+    rgba(247,249,253,.92);
+}
+.dashboard-main {
+  background:
+    radial-gradient(circle at 95% 12%, rgba(252,185,0,.10), transparent 17rem),
+    radial-gradient(circle at 4% 65%, rgba(36,74,152,.065), transparent 22rem);
+}
+.content {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse at 100% 0%, rgba(252,185,0,.075), transparent 23rem),
+    radial-gradient(ellipse at 0% 82%, rgba(36,74,152,.055), transparent 28rem);
+}
+.auth-wrap {
+  background:
+    radial-gradient(ellipse at 100% 0%, rgba(252,185,0,.08), transparent 25rem),
+    #fff;
+}
+.auth-art {
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse at 16% 92%, rgba(252,185,0,.20), transparent 27rem),
+    radial-gradient(circle at 82% 16%, rgba(80,123,198,.62), transparent 34%),
+    linear-gradient(132deg, #09183f 0%, #10265f 48%, #244a98 100%);
+}
+.auth-art::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  opacity: .22;
+  background:
+    repeating-linear-gradient(135deg, transparent 0 34px, rgba(255,255,255,.12) 35px, transparent 36px 70px);
+  mask-image: linear-gradient(115deg, black, transparent 78%);
+}
+.auth-art::after {
+  width: 480px;
+  height: 480px;
+  right: -175px;
+  bottom: -190px;
+  border: 1px solid rgba(252,185,0,.42);
+  box-shadow:
+    0 0 0 22px rgba(255,255,255,.045),
+    0 0 0 48px rgba(252,185,0,.075),
+    0 0 0 82px rgba(255,255,255,.035),
+    0 0 0 118px rgba(255,255,255,.025);
+}
+.welcome {
+  background:
+    radial-gradient(circle at 88% 18%, rgba(252,185,0,.23), transparent 19rem),
+    repeating-linear-gradient(135deg, transparent 0 42px, rgba(255,255,255,.035) 43px, transparent 44px 86px),
+    linear-gradient(120deg, #10265f 0%, #1d438c 68%, #244a98 100%);
+}
+.card, .stat, .auth-card {
+  backdrop-filter: blur(7px);
+}
+@media (max-width: 720px) {
+  body { background-attachment: scroll; }
+  .content { background: radial-gradient(ellipse at 100% 0%, rgba(252,185,0,.07), transparent 18rem); }
+}
+@media (prefers-reduced-motion: reduce) {
+  body { background-attachment: scroll; }
+}
