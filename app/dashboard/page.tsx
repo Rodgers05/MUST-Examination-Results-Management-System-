@@ -107,9 +107,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const marks = marksResult.rows
 
   const publishedQuery = profile.role === 'STUDENT'
-    ? supabase.from('published_results').select('id,offering_id,student_id,total_mark,grade,publication_status,published_at').eq('student_id', profile.id).order('published_at', { ascending: false })
+    ? supabase.from('published_results').select('id,offering_id,student_id,coursework_mark,exam_mark,total_mark,grade,grade_value,publication_status,published_at').eq('student_id', profile.id).order('published_at', { ascending: false })
     : offeringIds.length
-      ? supabase.from('published_results').select('id,offering_id,student_id,total_mark,grade,publication_status,published_at').in('offering_id', offeringIds).order('published_at', { ascending: false })
+      ? supabase.from('published_results').select('id,offering_id,student_id,coursework_mark,exam_mark,total_mark,grade,grade_value,publication_status,published_at').in('offering_id', offeringIds).order('published_at', { ascending: false })
       : null
   const publishedResult = publishedQuery ? await read(publishedQuery) : { rows: [] as Row[], error: null }
   const ticketsResult = isAdmin
@@ -302,11 +302,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             </Card>}
 
             {profile.role === 'STUDENT' && <Card id="results" title="Published results" note="Only records published for your own authenticated profile are queried.">
-              {publishedResult.rows.length ? <Table headings={['Course offering', 'Total mark', 'Grade', 'Status', 'Published']}>{publishedResult.rows.map((item) => <tr key={uid(item)}><td>{offeringText(text(item, 'offering_id'))}</td><td>{text(item, 'total_mark')}</td><td><strong>{text(item, 'grade')}</strong></td><td><StatusBadge value={text(item, 'publication_status')} /></td><td>{date(item.published_at)}</td></tr>)}</Table> : <Empty>No published results are available for your account.</Empty>}
+              {publishedResult.rows.length ? <Table headings={['Course offering', 'Coursework /40', 'Exam /60', 'Total /100', 'Grade', 'Grade point', 'Status', 'Published']}>{publishedResult.rows.map((item) => <tr key={uid(item)}><td>{offeringText(text(item, 'offering_id'))}</td><td>{text(item, 'coursework_mark') || '—'}</td><td>{text(item, 'exam_mark') || '—'}</td><td>{text(item, 'total_mark')}</td><td><strong>{text(item, 'grade')}</strong></td><td>{text(item, 'grade_value') || '—'}</td><td><StatusBadge value={text(item, 'publication_status')} /></td><td>{date(item.published_at)}</td></tr>)}</Table> : <Empty>No published results are available for your account.</Empty>}
             </Card>}
 
             {['ADMIN', 'REGISTRAR', 'REVIEWER'].includes(profile.role) && <Card id="reports" title="Published results report" note="Official totals and grades are read from the database publication table.">
-              {publishedResult.rows.length ? <Table headings={['Offering', 'Student', 'Total', 'Grade', 'Status', 'Published']}>{publishedResult.rows.map((item) => <tr key={uid(item)}><td>{offeringText(text(item, 'offering_id'))}</td><td>{studentName(text(item, 'student_id'))}</td><td>{text(item, 'total_mark')}</td><td>{text(item, 'grade')}</td><td><StatusBadge value={text(item, 'publication_status')} /></td><td>{date(item.published_at)}</td></tr>)}</Table> : <Empty>No published results are available.</Empty>}
+              {publishedResult.rows.length ? <Table headings={['Offering', 'Student', 'Coursework /40', 'Exam /60', 'Total /100', 'Grade', 'Grade point', 'Status', 'Published']}>{publishedResult.rows.map((item) => <tr key={uid(item)}><td>{offeringText(text(item, 'offering_id'))}</td><td>{studentName(text(item, 'student_id'))}</td><td>{text(item, 'coursework_mark') || '—'}</td><td>{text(item, 'exam_mark') || '—'}</td><td>{text(item, 'total_mark')}</td><td>{text(item, 'grade')}</td><td>{text(item, 'grade_value') || '—'}</td><td><StatusBadge value={text(item, 'publication_status')} /></td><td>{date(item.published_at)}</td></tr>)}</Table> : <Empty>No published results are available.</Empty>}
             </Card>}
 
             {isAdmin && <Card id="audit" title="Audit trail" note="The database policy limits audit-log reads to administrators.">
