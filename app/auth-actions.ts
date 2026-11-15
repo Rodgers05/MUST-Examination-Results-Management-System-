@@ -1,9 +1,17 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { isValidEmail } from '@/lib/validation.mjs'
 import { safeAppPath } from '@/lib/redirects.mjs'
+import { resolveAuthOrigin } from '@/lib/request-origin.mjs'
+
+async function getAuthOrigin() {
+  const requestHeaders = await headers()
+  const fallbackOrigin = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+  return resolveAuthOrigin(requestHeaders, fallbackOrigin)
+}
 
 function note(path: string, value: string): never {
   redirect(path + '?notice=' + encodeURIComponent(value))
@@ -18,7 +26,7 @@ export async function register(formData: FormData) {
   if (password.length < 12) note('/register', 'Use a password with at least 12 characters.')
 
   const supabase = await createClient()
-  const origin = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+  const origin = await getAuthOrigin()
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -27,7 +35,8 @@ export async function register(formData: FormData) {
       emailRedirectTo: origin + '/auth/callback?next=%2Fdashboard',
     },
   })
-  if (error) note('/register', 'We could not create this account. Check your email and try again.')
+  if (error?.code === 'email_provider_disabled') note('/register', 'Email registration is currently disabled. The administrator must enable the Email provider in Supabase Authentication settings.')
+  if (error) note('/register', 'We could not create this account. Check your details and try again.')
   if (data.session) {
     await supabase.auth.signOut()
     note('/login', 'Email verification is required. Check your inbox before signing in.')
@@ -75,7 +84,7 @@ export async function login(formData: FormData) {
 
 export async function googleSignIn() {
   const supabase = await createClient()
-  const origin = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+  const origin = await getAuthOrigin()
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
