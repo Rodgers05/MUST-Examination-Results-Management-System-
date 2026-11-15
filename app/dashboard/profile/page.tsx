@@ -20,7 +20,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
   const resultQuery = isStudent
     ? supabase.from('published_results')
         .select('id,offering_id,coursework_mark,exam_mark,total_mark,grade,grade_value,published_at')
-        .eq('student_id', profile.id).order('published_at', { ascending: false })
+        .eq('student_id', profile.id).eq('publication_status', 'PUBLISHED').order('published_at', { ascending: false })
     : null
   const assignmentQuery = !isStudent
     ? supabase.from('course_staff').select('offering_id,assignment_role').eq('user_id', profile.id)
