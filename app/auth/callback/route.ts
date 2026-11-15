@@ -14,6 +14,13 @@ export async function GET(request: NextRequest) {
       const { data: { user }, error: userError } = await supabase.auth.getUser()
 
       if (!userError && user?.email_confirmed_at) {
+        // Password recovery must reach the reset form even when the account is
+        // pending or suspended. Access to the application remains role/status
+        // protected after the password has been changed.
+        if (destination === '/reset-password') {
+          return NextResponse.redirect(new URL('/reset-password', request.url))
+        }
+
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('account_status')
