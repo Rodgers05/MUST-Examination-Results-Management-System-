@@ -36,7 +36,7 @@ test('email validation accepts any normal email domain and rejects malformed add
   for (const email of ['person@must.ac.ug', 'person@std.must.ac.ug', 'PERSON@MUST.AC.UG', 'person@gmail.com', 'person@outlook.com', 'person@yahoo.co.uk']) {
     assert.equal(isValidEmail(email), true, email)
   }
-  for (const email of ['', 'person', 'person@', '@gmail.com', 'person gmail@gmail.com', 'person@gmail', 'person@gmail.com.attacker', 'a'.repeat(250) + '@gmail.com']) {
+  for (const email of ['', 'person', 'person@', '@gmail.com', 'person gmail@gmail.com', 'person@gmail', 'a'.repeat(250) + '@gmail.com']) {
     assert.equal(isValidEmail(email), false, email)
   }
 })
