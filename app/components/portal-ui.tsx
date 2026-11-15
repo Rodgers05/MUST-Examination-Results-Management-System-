@@ -28,6 +28,8 @@ export function MustBrand({
       href="/"
       aria-label="Mbarara University of Science and Technology home"
     >
+      {/* The original crest is stored in the repository's Images folder rather than Next.js public/. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="https://raw.githubusercontent.com/Rodgers05/MUST-Examination-Results-Management-System-/main/Images/campus_logo.jpg"
         alt="Mbarara University of Science and Technology crest"
