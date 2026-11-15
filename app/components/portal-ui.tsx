@@ -45,6 +45,22 @@ export function MustBrand({
     </Link>
   )
 }
+export function PortalHeader({ nav = false }: { nav?: boolean }) {
+  return (
+    <header className="site-header">
+      <MustBrand />
+      {nav && (
+        <nav className="main-nav" aria-label="Main navigation">
+          <Link href="/">Home</Link>
+          <Link href="/login">Sign in</Link>
+          <Link href="/register">Student registration</Link>
+          <a href="https://www.must.ac.ug/" target="_blank" rel="noopener noreferrer">MUST website</a>
+        </nav>
+      )}
+    </header>
+  )
+}
+
 export function PortalFooter() {
   return <footer className="site-footer"><strong>Mbarara University of Science and Technology</strong><span>Secure examination services</span><a href="https://www.must.ac.ug/" target="_blank" rel="noopener noreferrer">must.ac.ug</a></footer>
 }

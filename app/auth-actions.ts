@@ -1,9 +1,17 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { isMustEmail } from '@/lib/validation.mjs'
+import { isValidEmail } from '@/lib/validation.mjs'
 import { safeAppPath } from '@/lib/redirects.mjs'
+import { resolveAuthOrigin } from '@/lib/request-origin.mjs'
+
+async function getAuthOrigin() {
+  const requestHeaders = await headers()
+  const fallbackOrigin = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+  return resolveAuthOrigin(requestHeaders, fallbackOrigin)
+}
 
 function note(path: string, value: string): never {
   redirect(path + '?notice=' + encodeURIComponent(value))
@@ -14,11 +22,11 @@ export async function register(formData: FormData) {
   const email = String(formData.get('email') ?? '').trim().toLowerCase()
   const password = String(formData.get('password') ?? '')
   if (fullName.length < 2 || fullName.length > 120) note('/register', 'Enter your name (2–120 characters).')
-  if (!isMustEmail(email)) note('/register', 'Use your @must.ac.ug or @std.must.ac.ug email address.')
+  if (!isValidEmail(email)) note('/register', 'Enter a valid email address.')
   if (password.length < 12) note('/register', 'Use a password with at least 12 characters.')
 
   const supabase = await createClient()
-  const origin = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+  const origin = await getAuthOrigin()
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -27,28 +35,29 @@ export async function register(formData: FormData) {
       emailRedirectTo: origin + '/auth/callback?next=%2Fdashboard',
     },
   })
-  if (error) note('/register', 'We could not create this account. Check your email and try again.')
+  if (error?.code === 'email_provider_disabled') note('/register', 'Email registration is currently disabled. The administrator must enable the Email provider in Supabase Authentication settings.')
+  if (error) note('/register', 'We could not create this account. Check your details and try again.')
   if (data.session) {
     await supabase.auth.signOut()
-    note('/login', 'Email verification is required. Check your MUST inbox before signing in.')
+    note('/login', 'Email verification is required. Check your inbox before signing in.')
   }
-  note('/login', 'Check your MUST email to verify the account. New accounts remain pending until approved.')
+  note('/login', 'Check your inbox to verify your email. New accounts remain pending until approved.')
 }
 
 export async function login(formData: FormData) {
   const email = String(formData.get('email') ?? '').trim().toLowerCase()
   const password = String(formData.get('password') ?? '')
   const next = safeAppPath(formData.get('next'))
-  if (!isMustEmail(email) || !password) note('/login', 'Enter your MUST institutional email and password.')
+  if (!isValidEmail(email) || !password) note('/login', 'Enter a valid email address and your password.')
 
   const supabase = await createClient()
   const { error } = await supabase.auth.signInWithPassword({ email, password })
-  if (error) note('/login', 'Sign-in failed. Check your details and verify your email address.')
+  if (error) note('/login', 'Sign-in failed. Check your email and password, and verify your email address.')
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user?.email_confirmed_at) {
     await supabase.auth.signOut()
-    note('/login', 'Verify your MUST email before signing in.')
+    note('/login', 'Verify your email address before signing in.')
   }
 
   const { data: claimsData, error: claimsError } = await supabase.auth.getClaims()
@@ -74,16 +83,18 @@ export async function login(formData: FormData) {
 }
 
 export async function googleSignIn() {
-  if (process.env.NEXT_PUBLIC_GOOGLE_OAUTH_ENABLED !== 'true') {
-    note('/login', 'Google sign-in is not configured for this project yet. Use your MUST email and password.')
-  }
   const supabase = await createClient()
-  const origin = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+  const origin = await getAuthOrigin()
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: origin + '/auth/callback?next=%2Fdashboard', queryParams: { prompt: 'select_account' } },
+    options: {
+      redirectTo: origin + '/auth/callback?next=%2Fdashboard',
+      queryParams: { prompt: 'select_account' },
+    },
   })
-  if (error || !data.url) note('/login', 'Google sign-in is unavailable. Use your MUST email and password.')
+  if (error || !data.url) {
+    note('/login', 'Google sign-in is not enabled yet. Configure the Google provider in Supabase Auth, then try again.')
+  }
   redirect(data.url)
 }
 
@@ -91,4 +102,23 @@ export async function logout() {
   const supabase = await createClient()
   await supabase.auth.signOut()
   redirect('/login?notice=You%20have%20signed%20out.')
+}
+
+
+export async function resendSignupConfirmation(formData: FormData) {
+  const email = String(formData.get('email') ?? '').trim().toLowerCase()
+  if (!isValidEmail(email)) note('/register', 'Enter a valid email address.')
+
+  const supabase = await createClient()
+  const origin = await getAuthOrigin()
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email,
+    options: {
+      emailRedirectTo: origin + '/auth/callback?next=%2Fdashboard',
+    },
+  })
+
+  if (error) note('/register', 'We could not send a confirmation email. Wait a minute and try again, or contact the system administrator.')
+  note('/register', 'If this address has an unconfirmed account, a new confirmation email has been requested. Check your inbox and spam folder.')
 }
