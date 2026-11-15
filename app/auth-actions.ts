@@ -103,3 +103,22 @@ export async function logout() {
   await supabase.auth.signOut()
   redirect('/login?notice=You%20have%20signed%20out.')
 }
+
+
+export async function resendSignupConfirmation(formData: FormData) {
+  const email = String(formData.get('email') ?? '').trim().toLowerCase()
+  if (!isValidEmail(email)) note('/register', 'Enter a valid email address.')
+
+  const supabase = await createClient()
+  const origin = await getAuthOrigin()
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email,
+    options: {
+      emailRedirectTo: origin + '/auth/callback?next=%2Fdashboard',
+    },
+  })
+
+  if (error) note('/register', 'We could not send a confirmation email. Wait a minute and try again, or contact the system administrator.')
+  note('/register', 'If this address has an unconfirmed account, a new confirmation email has been requested. Check your inbox and spam folder.')
+}
