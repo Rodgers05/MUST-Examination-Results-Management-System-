@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import type { Profile } from '@/lib/auth'
-import { logout } from '@/app/auth-actions'
 import { getStatusAppearance } from '@/lib/status.mjs'
 
 function WorkspaceLinks({ profile }: { profile: Profile }) {
@@ -78,7 +77,7 @@ export function DashboardFrame({ profile, children }: { profile: Profile; childr
       <div className="sidebar-bottom">
         <div className="help-card"><strong>Need assistance?</strong><p>Contact your examinations coordinator for account and workflow support.</p><a href="https://www.must.ac.ug/" target="_blank" rel="noopener noreferrer">Visit MUST website →</a></div>
         <div className="sidebar-user"><span>{profile.institutional_email}</span><small>{profile.role}</small><StatusBadge value={profile.account_status} /></div>
-        <form action={logout}><button className="button secondary signout" type="submit">Sign out</button></form>
+        <form action="/auth/logout" method="post"><button className="button secondary signout" type="submit">Sign out</button></form>
       </div>
     </aside>
     <div className="dashboard-main">
