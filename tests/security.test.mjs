@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
-import { isMustEmail, hasRole, validateBatchMarks } from '../lib/validation.mjs'
+import { isValidEmail, hasRole, validateBatchMarks } from '../lib/validation.mjs'
 import { safeAppPath } from '../lib/redirects.mjs'
 import { getStatusAppearance } from '../lib/status.mjs'
 
@@ -32,13 +32,13 @@ test('status badges use explicit status mappings and keep unknown values neutral
   assert.deepEqual(getStatusAppearance(null), { label: 'Unknown', tone: 'neutral' })
 })
 
-test('institutional email policy matches the existing MUST signup trigger', () => {
-  assert.equal(isMustEmail('person@must.ac.ug'), true)
-  assert.equal(isMustEmail('person@std.must.ac.ug'), true)
-  assert.equal(isMustEmail('PERSON@MUST.AC.UG'), true)
-  assert.equal(isMustEmail('person@gmail.com'), false)
-  assert.equal(isMustEmail('person@must.test'), false)
-  assert.equal(isMustEmail('must.ac.ug.attacker.test'), false)
+test('email validation accepts any normal email domain and rejects malformed addresses', () => {
+  for (const email of ['person@must.ac.ug', 'person@std.must.ac.ug', 'PERSON@MUST.AC.UG', 'person@gmail.com', 'person@outlook.com', 'person@yahoo.co.uk']) {
+    assert.equal(isValidEmail(email), true, email)
+  }
+  for (const email of ['', 'person', 'person@', '@gmail.com', 'person gmail@gmail.com', 'person@gmail', 'person@gmail.com.attacker', 'a'.repeat(250) + '@gmail.com']) {
+    assert.equal(isValidEmail(email), false, email)
+  }
 })
 
 test('authentication redirects accept safe application paths and reject external destinations', () => {
@@ -75,20 +75,24 @@ test('batch mark validation enforces maximums, enrolment and unique student-asse
   assert.ok(validateBatchMarks([], assessments, enrolled).error)
 })
 
-test('server contract uses verified claims, role gates, workflow RPCs and student ownership filters', async () => {
-  const [authActions, auth, proxy, actions, dashboard, browserClient] = await Promise.all([
+test('server contract uses verified claims, role gates, email verification and Google OAuth', async () => {
+  const [authActions, auth, proxy, actions, dashboard, browserClient, loginPage, registerPage] = await Promise.all([
     readFile(new URL('../app/auth-actions.ts', import.meta.url), 'utf8'),
     readFile(new URL('../lib/auth.ts', import.meta.url), 'utf8'),
     readFile(new URL('../proxy.ts', import.meta.url), 'utf8'),
     readFile(new URL('../app/dashboard/actions.ts', import.meta.url), 'utf8'),
     readFile(new URL('../app/dashboard/page.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../lib/supabase/client.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../app/login/page.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../app/register/page.tsx', import.meta.url), 'utf8'),
   ])
   assert.match(auth, /auth\.getClaims\(\)/)
   assert.match(proxy, /auth\.getClaims\(\)/)
   assert.doesNotMatch(authActions + auth + proxy + actions + dashboard + browserClient, /auth\.getSession\(\)|localStorage/)
   assert.match(authActions, /emailRedirectTo/)
   assert.match(authActions, /email_confirmed_at/)
+  assert.match(authActions, /signInWithOAuth\([\s\S]*provider: 'google'/)
+  assert.doesNotMatch(authActions, /NEXT_PUBLIC_GOOGLE_OAUTH_ENABLED/)
   assert.match(authActions, /data: \{ full_name: fullName \}/)
   assert.doesNotMatch(authActions, /data: \{[^}]*role:/)
   assert.doesNotMatch(authActions + auth + proxy + actions + dashboard + browserClient, /service_role|SUPABASE_SERVICE_ROLE_KEY|SUPABASE_SECRET_KEY/)
@@ -101,6 +105,10 @@ test('server contract uses verified claims, role gates, workflow RPCs and studen
   assert.match(actions, /account_status !== 'ACTIVE'/)
   assert.match(actions, /submission\.status !== 'UNDER_REVIEW'/)
   assert.match(actions, /submission\.status !== 'APPROVED'/)
+  assert.match(loginPage, /Continue with Google/)
+  assert.match(loginPage, /Email address/)
+  assert.match(registerPage, /Use any valid email address/)
+  assert.doesNotMatch(loginPage + registerPage, /institutional email|MUST email|Only @must\.ac\.ug/)
 })
 
 test('repository ignore rules cover local credentials, backups and frontend snapshots', async () => {
