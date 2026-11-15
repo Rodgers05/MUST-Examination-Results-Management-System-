@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { isValidEmail, hasRole, validateBatchMarks } from '../lib/validation.mjs'
+import { resolveAuthOrigin } from '../lib/request-origin.mjs'
 import { safeAppPath } from '../lib/redirects.mjs'
 import { getStatusAppearance } from '../lib/status.mjs'
 
@@ -39,6 +40,36 @@ test('email validation accepts any normal email domain and rejects malformed add
   for (const email of ['', 'person', 'person@', '@gmail.com', 'person gmail@gmail.com', 'person@gmail', 'a'.repeat(250) + '@gmail.com']) {
     assert.equal(isValidEmail(email), false, email)
   }
+})
+
+test('authentication callbacks use the active preview or production origin safely', () => {
+  const previewHeaders = new Headers({
+    origin: 'https://must-exam-results-preview.vercel.app',
+    host: 'must-exam-results-preview.vercel.app',
+  })
+  assert.equal(
+    resolveAuthOrigin(previewHeaders, 'https://must-exam-results.vercel.app'),
+    'https://must-exam-results-preview.vercel.app',
+  )
+
+  const forwardedHeaders = new Headers({
+    origin: 'https://must-exam-results-preview.vercel.app',
+    host: 'internal-vercel-host',
+    'x-forwarded-host': 'must-exam-results-preview.vercel.app',
+  })
+  assert.equal(
+    resolveAuthOrigin(forwardedHeaders, 'https://must-exam-results.vercel.app'),
+    'https://must-exam-results-preview.vercel.app',
+  )
+
+  const mismatchedHeaders = new Headers({
+    origin: 'https://attacker.example',
+    host: 'must-exam-results-preview.vercel.app',
+  })
+  assert.equal(
+    resolveAuthOrigin(mismatchedHeaders, 'https://must-exam-results.vercel.app'),
+    'https://must-exam-results.vercel.app',
+  )
 })
 
 test('authentication redirects accept safe application paths and reject external destinations', () => {
@@ -90,6 +121,9 @@ test('server contract uses verified claims, role gates, email verification and G
   assert.match(proxy, /auth\.getClaims\(\)/)
   assert.doesNotMatch(authActions + auth + proxy + actions + dashboard + browserClient, /auth\.getSession\(\)|localStorage/)
   assert.match(authActions, /emailRedirectTo/)
+  assert.match(authActions, /resolveAuthOrigin/)
+  assert.match(authActions, /await headers\(\)/)
+  assert.match(authActions, /email_provider_disabled/)
   assert.match(authActions, /email_confirmed_at/)
   assert.match(authActions, /signInWithOAuth\([\s\S]*provider: 'google'/)
   assert.doesNotMatch(authActions, /NEXT_PUBLIC_GOOGLE_OAUTH_ENABLED/)
