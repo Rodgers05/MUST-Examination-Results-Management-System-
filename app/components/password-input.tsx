@@ -19,7 +19,6 @@ export function PasswordInput(props: PasswordInputProps) {
       <input
         {...props}
         type={visible ? 'text' : 'password'}
-        aria-describedby={props.id + '-visibility'}
       />
       <button
         id={props.id + '-visibility'}
