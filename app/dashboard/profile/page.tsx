@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import { requireActiveProfile } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { Card, DashboardFrame, DataTable, Empty, StatusBadge } from '@/app/components/portal-ui'
