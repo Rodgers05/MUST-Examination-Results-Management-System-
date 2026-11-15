@@ -17,7 +17,7 @@ export default async function HomePage() {
       </section>
       <section className="auth-card-wrap"><div className="auth-card">
         <div className="kicker">WELCOME</div><h1>Examination results, managed with care.</h1>
-        <p className="muted">Sign in with your MUST institutional account. New accounts require verification and staff approval.</p>
+        <p className="muted">Sign in with your registered email address. New accounts require email verification and staff approval.</p>
         <Link className="button" href="/login">Sign in</Link>
         <div style={{height:12}} />
         <Link className="button secondary" href="/register">Create student account</Link>

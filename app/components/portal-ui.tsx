@@ -1,4 +1,3 @@
-import Image from 'next/image'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import type { Profile } from '@/lib/auth'
@@ -29,12 +28,13 @@ export function MustBrand({
       href="/"
       aria-label="Mbarara University of Science and Technology home"
     >
-      <Image
-        src="/images/campus_logo.jpg"
-        alt="Mbarara University of Science and Technology logo"
+      {/* The original crest is stored in the repository's Images folder rather than Next.js public/. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="https://raw.githubusercontent.com/Rodgers05/MUST-Examination-Results-Management-System-/main/Images/campus_logo.jpg"
+        alt="Mbarara University of Science and Technology crest"
         width={58}
         height={58}
-        priority
         className="brand-logo"
       />
 
@@ -45,12 +45,29 @@ export function MustBrand({
     </Link>
   )
 }
+export function PortalHeader({ nav = false }: { nav?: boolean }) {
+  return (
+    <header className="site-header">
+      <MustBrand />
+      {nav && (
+        <nav className="main-nav" aria-label="Main navigation">
+          <Link href="/">Home</Link>
+          <Link href="/login">Sign in</Link>
+          <Link href="/register">Student registration</Link>
+          <a href="https://www.must.ac.ug/" target="_blank" rel="noopener noreferrer">MUST website</a>
+        </nav>
+      )}
+    </header>
+  )
+}
+
 export function PortalFooter() {
-  return <footer className="site-footer"><strong>Mbarara University of Science and Technology</strong><span>Secure examination services</span><a href="https://www.must.ac.ug/" target="_blank" rel="noopener noreferrer">must.ac.ug</a></footer>
+  return <footer className="site-footer"><strong>Mbarara University of Science and Technology</strong><span>Examination Results Management System · Secure academic services</span><a href="https://www.must.ac.ug/" target="_blank" rel="noopener noreferrer">Official university website</a></footer>
 }
 
 export function DashboardFrame({ profile, children }: { profile: Profile; children: ReactNode }) {
-  const initials = profile.full_name.trim().split(/\s+/).map((word) => word[0]).slice(0, 2).join('').toUpperCase()
+  const displayName = profile.full_name.trim() || (profile.role === 'ADMIN' ? 'System Administrator' : profile.role.charAt(0) + profile.role.slice(1).toLowerCase())
+  const initials = displayName.trim().split(/\s+/).map((word) => word[0]).slice(0, 2).join('').toUpperCase() || 'MU'
   return <div className="dashboard-shell">
     <aside className="sidebar">
       <MustBrand subtitle="Examination Services" />
@@ -65,7 +82,7 @@ export function DashboardFrame({ profile, children }: { profile: Profile; childr
       </div>
     </aside>
     <div className="dashboard-main">
-      <header className="topbar"><div className="mobile-brand"><MustBrand subtitle="Examination Services" /></div><div className="topbar-title"><span className="crumb">MUST / {profile.role} workspace</span><strong>Examination Results Management System</strong></div><div className="userbar"><span className="avatar" aria-hidden="true">{initials}</span><span className="user-meta"><strong>{profile.full_name}</strong><small>{profile.role}</small><StatusBadge value={profile.account_status} /></span></div></header>
+      <header className="topbar"><div className="mobile-brand"><MustBrand subtitle="Examination Services" /></div><div className="topbar-title"><span className="crumb">MUST / {profile.role} workspace</span><strong>Examination Results Management System</strong></div><div className="userbar"><span className="avatar" aria-hidden="true">{initials}</span><span className="user-meta"><strong>{displayName}</strong><small>{profile.role}</small><StatusBadge value={profile.account_status} /></span></div></header>
       <div className="mobile-nav"><details><summary>Workspace menu</summary><nav aria-label="Mobile workspace navigation"><WorkspaceLinks profile={profile} /></nav></details></div>
       {children}
       <PortalFooter />
