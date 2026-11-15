@@ -59,6 +59,16 @@ BEGIN
     RAISE EXCEPTION 'An end-of-semester examination assessment is required';
   END IF;
 
+  IF NOT EXISTS (
+    SELECT 1 FROM public.assessments WHERE offering_id = v_offering
+    GROUP BY offering_id
+    HAVING count(*) FILTER (WHERE assessment_type = 'TEST') >= 2
+       OR (count(*) FILTER (WHERE assessment_type = 'TEST') >= 1
+           AND count(*) FILTER (WHERE assessment_type = 'COURSEWORK') >= 1)
+  ) THEN
+    RAISE EXCEPTION 'MUST coursework requires at least two tests or one test and one assignment/take-home assessment';
+  END IF;
+
   IF EXISTS (
     SELECT 1
     FROM public.enrollments e
