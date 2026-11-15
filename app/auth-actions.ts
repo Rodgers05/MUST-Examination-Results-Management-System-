@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { isValidEmail } from '@/lib/validation.mjs'
+import { isValidEmail, isValidPassword } from '@/lib/validation.mjs'
 import { safeAppPath } from '@/lib/redirects.mjs'
 import { resolveAuthOrigin } from '@/lib/request-origin.mjs'
 
@@ -17,13 +17,24 @@ function note(path: string, value: string): never {
   redirect(path + '?notice=' + encodeURIComponent(value))
 }
 
+function emailDeliveryFailure(error: { message?: string; code?: string }) {
+  const detail = `${error.code ?? ''} ${error.message ?? ''}`.toLowerCase()
+  if (detail.includes('550') || detail.includes('testing emails') || detail.includes('verify a domain')) {
+    return 'Confirmation email delivery is blocked because the Resend sender domain is still in testing mode. The administrator must verify the domain in Resend and use its verified sender address in Supabase SMTP settings.'
+  }
+  if (detail.includes('535') || detail.includes('authentication credentials invalid')) {
+    return 'Confirmation email delivery is misconfigured. The administrator must update the SMTP username and API-key password in Supabase Authentication settings.'
+  }
+  return 'We could not send a confirmation email. Check the email service configuration or contact the system administrator.'
+}
+
 export async function register(formData: FormData) {
   const fullName = String(formData.get('full_name') ?? '').trim()
   const email = String(formData.get('email') ?? '').trim().toLowerCase()
   const password = String(formData.get('password') ?? '')
   if (fullName.length < 2 || fullName.length > 120) note('/register', 'Enter your name (2–120 characters).')
   if (!isValidEmail(email)) note('/register', 'Enter a valid email address.')
-  if (password.length < 12) note('/register', 'Use a password with at least 12 characters.')
+  if (!isValidPassword(password)) note('/register', 'Use at least 12 characters, including an uppercase letter, a lowercase letter and a number.')
 
   const supabase = await createClient()
   const origin = await getAuthOrigin()
@@ -36,7 +47,7 @@ export async function register(formData: FormData) {
     },
   })
   if (error?.code === 'email_provider_disabled') note('/register', 'Email registration is currently disabled. The administrator must enable the Email provider in Supabase Authentication settings.')
-  if (error) note('/register', 'We could not create this account. Check your details and try again.')
+  if (error) note('/register', error.code === 'unexpected_failure' ? emailDeliveryFailure(error) : 'We could not create this account. Check your details and try again.')
   if (data.session) {
     await supabase.auth.signOut()
     note('/login', 'Email verification is required. Check your inbox before signing in.')
@@ -119,6 +130,6 @@ export async function resendSignupConfirmation(formData: FormData) {
     },
   })
 
-  if (error) note('/register', 'We could not send a confirmation email. Wait a minute and try again, or contact the system administrator.')
+  if (error) note('/register', emailDeliveryFailure(error))
   note('/register', 'If this address has an unconfirmed account, a new confirmation email has been requested. Check your inbox and spam folder.')
 }
