@@ -7,7 +7,7 @@ function WorkspaceLinks({ profile }: { profile: Profile }) {
   return <>
     <a href="#overview">Overview</a>
     <a href="#catalogue">Course catalogue</a>
-    {profile.role === 'LECTURER' && <><a href="#assessments">Assessment setup</a><a href="#marks">Batch marks</a></>}
+    {profile.role === 'LECTURER' && <><Link href="/dashboard/lecturer">Lecturer marks workspace</Link><a href="#assessments">Assessment setup</a><a href="#marks">Batch marks</a></>}
     {['REVIEWER', 'REGISTRAR', 'ADMIN'].includes(profile.role) && <a href="#workflow">Results workflow</a>}
     {profile.role === 'STUDENT' && <a href="#results">Published results</a>}
     {['ADMIN', 'REGISTRAR', 'REVIEWER'].includes(profile.role) && <a href="#reports">Reports</a>}
