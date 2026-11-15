@@ -15,6 +15,13 @@ Copy `.env.example` to `.env.local` and configure the project URL and publishabl
 5. In Supabase **Authentication → URL Configuration**, set the Site URL to `https://must-exam-results.vercel.app` and allow `https://must-exam-results.vercel.app/auth/callback` as a redirect URL. Add the matching localhost callback for local development if needed.
 6. Redeploy the app after code changes. The login button now invokes Google OAuth directly; if the provider is not yet configured, the page displays a setup message rather than silently disabling the button.
 
+### Email and OAuth operational checks
+
+- Registration and confirmation emails require a verified sending domain in Resend. Resend's testing sender only delivers to the account owner's address; attempts to other recipients return SMTP 550 errors. Use a sender address on the verified domain in Supabase Authentication SMTP settings.
+- An SMTP 535 response means the SMTP credentials were rejected. Recheck the Resend SMTP username and replace the SMTP password with the current Resend API key in Supabase. Do not put that key in a `NEXT_PUBLIC_*` variable or commit it.
+- Google sign-in requires the Google provider to be enabled and configured in Supabase Authentication. The application reports a clear setup message when Supabase returns “provider is not enabled”.
+- The registration form and server action enforce the current password rule: at least 12 characters, with at least one lowercase letter, one uppercase letter and one number.
+
 ## Existing schema map
 
 | Application feature | Existing Supabase tables and functions |
