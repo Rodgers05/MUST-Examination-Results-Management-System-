@@ -53,7 +53,7 @@ export async function uploadProfileAvatar(formData: FormData) {
   if (!extension) notice('Use a JPG, PNG or WebP image.')
 
   const supabase = await createClient()
-  const path = profile.id + '/avatar.' + extension
+  const path = profile.id + '/avatar-' + Date.now() + '.' + extension
   const { error: uploadError } = await supabase.storage.from('profile-avatars').upload(path, file, {
     contentType: file.type,
     upsert: true,
@@ -64,7 +64,11 @@ export async function uploadProfileAvatar(formData: FormData) {
   const { error: profileError } = await supabase.from('profiles')
     .update({ avatar_path: path })
     .eq('id', profile.id)
-  if (profileError) notice('The image was uploaded but could not be linked to your profile. Contact support.')
+  if (profileError) {
+    await supabase.storage.from('profile-avatars').remove([path])
+    notice('The image was uploaded but could not be linked to your profile. Contact support.')
+  }
+  if (profile.avatar_path) await supabase.storage.from('profile-avatars').remove([profile.avatar_path])
   revalidatePath('/dashboard')
   revalidatePath('/dashboard/profile')
   notice('Your profile picture has been updated.')
