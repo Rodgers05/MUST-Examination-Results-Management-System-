@@ -34,7 +34,7 @@ async function assigned(supabase: Awaited<ReturnType<typeof createClient>>, user
 
 async function offeringRows(supabase: Awaited<ReturnType<typeof createClient>>, offeringId: string) {
   const [assessmentResult, enrollmentResult] = await Promise.all([
-    supabase.from('assessments').select('id,title,maximum_mark,weight').eq('offering_id', offeringId),
+    supabase.from('assessments').select('id,title,assessment_type,maximum_mark,weight').eq('offering_id', offeringId),
     supabase.from('enrollments').select('student_id').eq('offering_id', offeringId).eq('enrollment_status', 'ENROLLED'),
   ])
   return { assessments: assessmentResult.data ?? [], enrollments: enrollmentResult.data ?? [], error: assessmentResult.error || enrollmentResult.error }
