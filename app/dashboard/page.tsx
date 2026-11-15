@@ -50,11 +50,24 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       ? read(supabase.from('profiles').select('id,institutional_email,full_name,student_number,staff_number,department_id,role,account_status').order('full_name'))
       : Promise.resolve({ rows: [] as Row[], error: null }),
   ])
-  const departments = departmentResult.rows
-  const years = yearResult.rows
-  const semesters = semesterResult.rows
-  const courses = courseResult.rows
-  const offerings = offeringResult.rows
+  // Keep clearly marked seed/demo catalogue rows out of the live workspace.
+  // The underlying rows are preserved until an administrator approves cleanup.
+  const departments = departmentResult.rows.filter((item) =>
+    !/^DEMO(?:[-\s]|$)/i.test(text(item, 'code')) &&
+    !/^DEMO(?:[-\s—]|$)/i.test(text(item, 'name'))
+  )
+  const years = yearResult.rows.filter((item) => !/^DEMO(?:[-\s—]|$)/i.test(text(item, 'label')))
+  const yearIds = new Set(years.map((item) => uid(item)))
+  const semesters = semesterResult.rows.filter((item) => yearIds.has(text(item, 'academic_year_id')))
+  const courses = courseResult.rows.filter((item) =>
+    !/^DEMO(?:[-\s]|$)/i.test(text(item, 'code')) &&
+    !/^DEMO(?:[-\s—]|$)/i.test(text(item, 'title'))
+  )
+  const courseIds = new Set(courses.map((item) => uid(item)))
+  const semesterIds = new Set(semesters.map((item) => uid(item)))
+  const offerings = offeringResult.rows.filter((item) =>
+    courseIds.has(text(item, 'course_id')) && semesterIds.has(text(item, 'semester_id'))
+  )
   const profiles = profileResult.rows
   const assignmentQuery = isAdmin
     ? supabase.from('course_staff').select('id,offering_id,user_id,assignment_role,assigned_by')
@@ -167,15 +180,19 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               { value: openTickets, label: 'Open support requests', state: 'OPEN' },
               { value: profile.account_status === 'ACTIVE' ? 1 : 0, label: 'Account access', state: profile.account_status },
             ]
+  const displayName = profile.full_name.trim() || (profile.role === 'ADMIN' ? 'Administrator' : profile.role.charAt(0) + profile.role.slice(1).toLowerCase())
   const noticeText = notice ? <div className="notice">{notice}</div> : null
 
   return (
     <DashboardFrame profile={profile}>
         <main className="content" id="overview">
-          <section className="welcome"><div><div className="kicker">{profile.role} WORKSPACE</div><h1>Welcome, {profile.full_name.split(' ')[0]}.</h1><p>Role-based examination services for Mbarara University of Science and Technology.</p></div><span className="tag">SECURE SESSION</span></section>
+          <section className="welcome"><div><div className="kicker">{profile.role} WORKSPACE</div><h1>Welcome, {displayName.split(' ')[0]}.</h1><p>Role-based examination services for Mbarara University of Science and Technology.</p></div><span className="tag">SECURE SESSION</span></section>
           {noticeText}
           {dashboardHasQueryErrors && <div className="notice error" role="alert">Some workspace information could not be loaded. Empty sections may be incomplete; refresh the page or contact support if the issue continues.</div>}
-          <div className="demo-banner"><strong>Demonstration catalogue:</strong> current seeded catalogue entries are sample data. Confirm academic offerings and assignments before operational use.</div>
+          {isAdmin && offerings.length === 0 && <section className="setup-panel" aria-label="Initial system setup">
+            <div><span className="setup-eyebrow">INITIAL CONFIGURATION</span><h2>Prepare the academic catalogue</h2><p>No live course offerings are configured yet. Add the approved academic year, departments, courses and semester details to begin using results workflows.</p></div>
+            <a className="button" href="#catalogue-admin">Configure catalogue</a>
+          </section>}
           <div className="stats" aria-label={`${profile.role.toLowerCase()} dashboard summary`}>
             {dashboardStats.map((item) => <div className="stat" key={item.label}>
               <strong>{item.value}</strong><span>{item.label}</span>
@@ -193,10 +210,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                   const department = departments.find((item) => uid(item) === text(course ?? {}, 'department_id'))
                   return <tr key={uid(offering)}><td><OfferingLabel offering={offering} courses={courses} semesters={semesters} /></td><td>{text(department ?? {}, 'name') || '—'}</td><td><span className="cell-primary">{text(semester ?? {}, 'name') || '—'}</span><StatusBadge value={text(semester ?? {}, 'status')} /></td><td><span className="cell-primary">{text(year ?? {}, 'label') || '—'}</span>{year && <StatusBadge value={Boolean(year.is_current)} />}</td></tr>
                 })}
-              </Table> : <Empty>No catalogue offerings are available.</Empty>}
+              </Table> : <Empty>No live course offerings are configured. Once the approved academic catalogue is entered, course offerings will appear here.</Empty>}
             </Card>
 
-            {isAdmin && <Card title="Catalogue administration" note="Create the records that connect courses, semesters and users.">
+            {isAdmin && <Card id="catalogue-admin" title="Academic catalogue administration" note="Enter approved MUST academic records. These records power course offerings, staff assignments, enrolments and results processing.">
               <div className="grid">
                 <form action={createCatalogueRecord} className="card half"><input type="hidden" name="kind" value="department" /><h3>Department</h3><div className="field"><label>Code</label><input name="code" required maxLength={20} /></div><div className="field"><label>Name</label><input name="name" required maxLength={120} /></div><button>Save department</button></form>
                 <form action={createCatalogueRecord} className="card half"><input type="hidden" name="kind" value="academic_year" /><h3>Academic year</h3><div className="field"><label>Label</label><input name="label" placeholder="YYYY/YYYY" required /></div><div className="form-grid"><div className="field"><label>Starts</label><input type="date" name="starts_on" required /></div><div className="field"><label>Ends</label><input type="date" name="ends_on" required /></div></div><button>Save year</button></form>
