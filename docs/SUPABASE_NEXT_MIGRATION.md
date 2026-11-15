@@ -4,9 +4,16 @@
 
 The root application uses Next.js 16 App Router, Supabase Auth and the existing Supabase PostgreSQL project. Next.js 16 requires Node.js 20.9 or newer. Start locally with `npm install` followed by `npm run dev`; use `npm run build`, `npm run lint`, `npm run typecheck` and `npm test` for verification.
 
-Copy `.env.example` to `.env.local` and configure the project URL and publishable key from Supabase. Never place a Supabase secret/service-role key in this app. Set `NEXT_PUBLIC_SITE_URL` to the local or hosted origin. Google OAuth is disabled until its provider is configured in Supabase Auth and the approved redirect URL is registered.
+Copy `.env.example` to `.env.local` and configure the project URL and publishable key from Supabase. Never place a Supabase secret/service-role key in this app. Set `NEXT_PUBLIC_SITE_URL` to the local or hosted origin. Email/password registration accepts any syntactically valid email address; Supabase email confirmation must remain enabled. Registration sends only the user's name as metadata; the database trigger assigns `STUDENT` and `PENDING`. An administrator must approve and activate access. Google sign-in uses Supabase OAuth and the same profile-status gate; newly created Google accounts are also assigned `STUDENT` and `PENDING` by the auth-user trigger.
 
-Email registration accepts `@must.ac.ug` and `@std.must.ac.ug`, matching the existing signup trigger. Supabase email confirmation must be enabled. Registration sends only the user's name as metadata; the existing trigger assigns `STUDENT` and `PENDING`. An administrator must approve and activate access.
+### Google OAuth setup
+
+1. In Google Cloud Console, create an OAuth client with application type **Web application**.
+2. Add `https://must-exam-results.vercel.app` as an authorized JavaScript origin.
+3. Add the Supabase callback URL `https://axqknavghtqeyayglosr.supabase.co/auth/v1/callback` as an authorized redirect URI.
+4. In Supabase **Authentication → Sign In / Providers → Google**, enable Google and enter the Google OAuth client ID and client secret. Keep the client secret in Supabase only; do not add it to browser code or Git.
+5. In Supabase **Authentication → URL Configuration**, set the Site URL to `https://must-exam-results.vercel.app` and allow `https://must-exam-results.vercel.app/auth/callback` as a redirect URL. Add the matching localhost callback for local development if needed.
+6. Redeploy the app after code changes. The login button now invokes Google OAuth directly; if the provider is not yet configured, the page displays a setup message rather than silently disabling the button.
 
 ## Existing schema map
 
