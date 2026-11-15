@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { register } from '@/app/auth-actions'
+import { register, resendSignupConfirmation } from '@/app/auth-actions'
 import { PortalFooter, PortalHeader } from '@/app/components/portal-ui'
 
 export default async function RegisterPage({ searchParams }: { searchParams: Promise<{ notice?: string }> }) {
@@ -16,7 +16,12 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
           <div className="field"><label htmlFor="password">Password</label><input id="password" name="password" type="password" autoComplete="new-password" minLength={12} required /><small className="subtle">Use at least 12 characters.</small></div>
           <button type="submit">Request student account</button>
         </form>
-        <p className="auth-foot">Already registered? <Link href="/login">Sign in</Link>. Accounts require email verification and administrator approval.</p>
+        <div className="auth-divider"><span>ALREADY HAVE AN ACCOUNT?</span></div>
+        <form action={resendSignupConfirmation}>
+          <div className="field"><label htmlFor="resend_email">Resend confirmation email</label><input id="resend_email" name="email" type="email" autoComplete="email" placeholder="Enter your registered email" required /></div>
+          <button type="submit" className="secondary-button">Resend confirmation email</button>
+        </form>
+        <p className="auth-foot">Already verified? <Link href="/login">Sign in</Link>. Accounts require administrator approval.</p>
       </div></section>
     </main><PortalFooter /></>
   )
