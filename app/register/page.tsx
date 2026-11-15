@@ -13,7 +13,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
         <form action={register}>
           <div className="field"><label htmlFor="full_name">Full name</label><input id="full_name" name="full_name" autoComplete="name" minLength={2} maxLength={120} required /></div>
           <div className="field"><label htmlFor="email">Email address</label><input id="email" name="email" type="email" autoComplete="email" required /></div>
-          <div className="field"><label htmlFor="password">Password</label><input id="password" name="password" type="password" autoComplete="new-password" minLength={12} required /><small className="subtle">Use at least 12 characters.</small></div>
+          <div className="field"><label htmlFor="password">Password</label><input id="password" name="password" type="password" autoComplete="new-password" minLength={12} pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9]).{12,}" title="At least 12 characters, including uppercase, lowercase and a number." required /><small className="subtle">At least 12 characters, with uppercase, lowercase and a number.</small></div>
           <button type="submit">Request student account</button>
         </form>
         <div className="auth-divider"><span>ALREADY HAVE AN ACCOUNT?</span></div>
