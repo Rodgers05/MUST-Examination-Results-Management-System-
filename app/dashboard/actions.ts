@@ -46,7 +46,15 @@ async function requireCompleteOffering(supabase: Awaited<ReturnType<typeof creat
   if (!assessments.length) return 'Configure at least one assessment before submitting results.'
   if (!enrollments.length) return 'There are no enrolled students in this course offering.'
   const weight = assessments.reduce((sum, item) => sum + Number(item.weight), 0)
+  const coursework = assessments.filter((item) => item.assessment_type !== 'EXAM')
+  const exams = assessments.filter((item) => item.assessment_type === 'EXAM')
+  const courseworkWeight = coursework.reduce((sum, item) => sum + Number(item.weight), 0)
+  const examWeight = exams.reduce((sum, item) => sum + Number(item.weight), 0)
+  const testCount = coursework.filter((item) => item.assessment_type === 'TEST').length
+  const assignmentCount = coursework.filter((item) => item.assessment_type === 'COURSEWORK').length
   if (Math.abs(weight - 100) > 0.01) return 'Assessment weights must total 100 percent before submission.'
+  if (courseworkWeight > 40.01 || examWeight > 60.01 || !exams.length) return 'MUST weighting requires coursework not to exceed 40% and end-of-semester examinations not to exceed 60%.'
+  if (!(testCount >= 2 || (testCount >= 1 && assignmentCount >= 1))) return 'Coursework must include at least two tests, or one test and one assignment/take-home assessment.'
   const { data: marks, error: marksError } = await supabase.from('marks').select('assessment_id,student_id')
     .in('assessment_id', assessments.map((assessment) => assessment.id))
   if (marksError) return 'Could not verify the assessment marks.'
@@ -145,9 +153,12 @@ export async function createAssessment(form: FormData) {
       !Number.isFinite(maximum_mark) || maximum_mark <= 0 || maximum_mark > 100 ||
       !Number.isFinite(weight) || weight <= 0 || weight > 100) say('Check the assessment title, type, maximum mark and weight.')
   if (profile.role === 'LECTURER' && !(await assigned(supabase, profile.id, offering_id, 'LECTURER'))) say('You are not assigned to that course offering.')
-  const { data: existing } = await supabase.from('assessments').select('weight').eq('offering_id', offering_id)
-  const total = (existing ?? []).reduce((sum, item) => sum + Number(item.weight), 0)
-  if (total + weight > 100.01) say('Assessment weights cannot exceed 100 percent.')
+  const { data: existing } = await supabase.from('assessments').select('assessment_type,weight').eq('offering_id', offering_id)
+  const courseworkTotal = (existing ?? []).filter((item) => item.assessment_type !== 'EXAM').reduce((sum, item) => sum + Number(item.weight), 0)
+  const examTotal = (existing ?? []).filter((item) => item.assessment_type === 'EXAM').reduce((sum, item) => sum + Number(item.weight), 0)
+  const categoryTotal = assessment_type === 'EXAM' ? examTotal : courseworkTotal
+  const categoryLimit = assessment_type === 'EXAM' ? 60 : 40
+  if (categoryTotal + weight > categoryLimit + 0.01) say(`MUST allows up to ${categoryLimit}% for ${assessment_type === 'EXAM' ? 'end-of-semester examinations' : 'coursework'}.`)
   const { error } = await supabase.from('assessments').insert({
     offering_id, title, assessment_type, maximum_mark, weight, created_by: profile.id,
   })
