@@ -13,6 +13,8 @@ export type Profile = {
   department_id: string | null
   role: AppRole
   account_status: AccountStatus
+  avatar_path: string | null
+  theme_preference: 'light' | 'dark' | 'system'
 }
 
 export async function getProfile(): Promise<Profile | null> {
@@ -24,7 +26,7 @@ export async function getProfile(): Promise<Profile | null> {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('id,institutional_email,full_name,student_number,staff_number,department_id,role,account_status')
+    .select('id,institutional_email,full_name,student_number,staff_number,department_id,role,account_status,avatar_path,theme_preference')
     .eq('id', userId)
     .maybeSingle()
 
