@@ -153,3 +153,33 @@ export async function resendSignupConfirmation(formData: FormData) {
   if (error) note('/register', emailDeliveryFailure(error))
   note('/register', 'If this address has an unconfirmed account, a new confirmation email has been requested. Check your inbox and spam folder.')
 }
+
+
+export async function requestPasswordReset(formData: FormData) {
+  const email = String(formData.get('email') ?? '').trim().toLowerCase()
+  if (!isValidEmail(email)) note('/forgot-password', 'Enter a valid email address.')
+
+  const supabase = await createClient()
+  const origin = await getAuthOrigin()
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: origin + '/auth/callback?next=%2Freset-password',
+  })
+  if (error) note('/forgot-password', 'We could not request a recovery email right now. Wait a moment and try again.')
+  note('/forgot-password', 'If an account exists for that email, a password recovery link has been sent. Check your inbox and spam folder.')
+}
+
+export async function updateRecoveredPassword(formData: FormData) {
+  const password = String(formData.get('password') ?? '')
+  const confirmation = String(formData.get('confirm_password') ?? '')
+  if (!isValidPassword(password)) note('/reset-password', 'Use at least 12 characters, including uppercase, lowercase and a number.')
+  if (password !== confirmation) note('/reset-password', 'The password and confirmation do not match.')
+
+  const supabase = await createClient()
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  if (userError || !user) note('/forgot-password', 'Your recovery session has expired. Request a new recovery link.')
+
+  const { error } = await supabase.auth.updateUser({ password })
+  if (error) note('/reset-password', 'The new password could not be saved. Request a fresh recovery link and try again.')
+  await supabase.auth.signOut()
+  note('/login', 'Your password has been updated. Sign in with your new password.')
+}
