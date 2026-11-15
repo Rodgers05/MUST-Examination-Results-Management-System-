@@ -206,7 +206,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 {offerings.map((offering) => {
                   const course = courses.find((item) => uid(item) === text(offering, 'course_id'))
                   const semester = semesters.find((item) => uid(item) === text(offering, 'semester_id'))
-                  const year = years.find((item) => uid(item) === text(item, 'id') && uid(item) === text(semester ?? {}, 'academic_year_id'))
+                  const year = years.find((item) => uid(item) === text(semester ?? {}, 'academic_year_id'))
                   const department = departments.find((item) => uid(item) === text(course ?? {}, 'department_id'))
                   return <tr key={uid(offering)}><td><OfferingLabel offering={offering} courses={courses} semesters={semesters} /></td><td>{text(department ?? {}, 'name') || '—'}</td><td><span className="cell-primary">{text(semester ?? {}, 'name') || '—'}</span><StatusBadge value={text(semester ?? {}, 'status')} /></td><td><span className="cell-primary">{text(year ?? {}, 'label') || '—'}</span>{year && <StatusBadge value={Boolean(year.is_current)} />}</td></tr>
                 })}
