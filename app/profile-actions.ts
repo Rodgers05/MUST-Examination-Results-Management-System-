@@ -16,7 +16,7 @@ export async function updatePersonalProfile(formData: FormData) {
 
   const supabase = await createClient()
   const { error } = await supabase.from('profiles')
-    .update({ full_name: fullName, updated_at: new Date().toISOString() })
+    .update({ full_name: fullName })
     .eq('id', profile.id)
   if (error) notice('Your profile could not be updated. Please try again.')
   revalidatePath('/dashboard')
@@ -31,7 +31,7 @@ export async function updateThemePreference(formData: FormData) {
 
   const supabase = await createClient()
   const { error } = await supabase.from('profiles')
-    .update({ theme_preference: theme, updated_at: new Date().toISOString() })
+    .update({ theme_preference: theme })
     .eq('id', profile.id)
   if (error) notice('Your appearance preference could not be saved.')
   revalidatePath('/dashboard')
@@ -62,7 +62,7 @@ export async function uploadProfileAvatar(formData: FormData) {
   if (uploadError) notice('The image could not be uploaded. Check the file and try again.')
 
   const { error: profileError } = await supabase.from('profiles')
-    .update({ avatar_path: path, updated_at: new Date().toISOString() })
+    .update({ avatar_path: path })
     .eq('id', profile.id)
   if (profileError) notice('The image was uploaded but could not be linked to your profile. Contact support.')
   revalidatePath('/dashboard')
