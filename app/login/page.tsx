@@ -15,7 +15,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <input type="hidden" name="next" value={next || '/dashboard'} />
           <div className="field"><label htmlFor="email">Email address</label><input id="email" name="email" type="email" autoComplete="username" required /></div>
           <div className="field"><label htmlFor="password">Password</label><PasswordField id="password" autoComplete="current-password" /></div>
-          <button type="submit">Sign in securely</button>
+          <button type="submit">Sign in securely</button>\n        <p className="auth-foot"><Link href="/forgot-password">Forgot your password?</Link></p>
         </form>
         <div className="auth-divider"><span>OR</span></div>
         <form action={googleSignIn}><button type="submit" className="secondary">Continue with Google</button></form>
