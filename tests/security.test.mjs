@@ -137,7 +137,7 @@ test('server contract uses verified claims, role gates, email verification and G
   assert.match(authActions, /await headers\(\)/)
   assert.match(authActions, /email_provider_disabled/)
   assert.match(authActions, /email_confirmed_at/)
-  assert.match(authActions, /if \(!isMustInstitutionalEmail\(email\)\)/)
+  assert.doesNotMatch(authActions.split('export async function register')[1].split('export async function login')[0], /isMustInstitutionalEmail/)
   assert.doesNotMatch(authActions.split('export async function login')[1].split('export async function googleSignIn')[0], /isMustInstitutionalEmail/)
   assert.match(authActions, /isCompromisedPassword\(password\)/)
   assert.match(authActions, /This password appears in known data breaches/)
