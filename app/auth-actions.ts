@@ -5,6 +5,7 @@ import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { isMustInstitutionalEmail, isValidPassword } from '@/lib/validation.mjs'
 import { safeAppPath } from '@/lib/redirects.mjs'
+import { isCompromisedPassword } from '@/lib/password-security.mjs'
 import { resolveAuthOrigin } from '@/lib/request-origin.mjs'
 
 async function getAuthOrigin() {
@@ -41,6 +42,13 @@ export async function register(formData: FormData) {
   if (fullName.length < 2 || fullName.length > 120) note('/register', 'Enter your name (2–120 characters).')
   if (!isMustInstitutionalEmail(email)) note('/register', 'Use your MUST institutional email address (for example, your @std.must.ac.ug or other @must.ac.ug address). Personal email addresses are not accepted.')
   if (!isValidPassword(password)) note('/register', 'Use at least 12 characters, including an uppercase letter, a lowercase letter and a number.')
+  let compromisedPassword = false
+  try {
+    compromisedPassword = await isCompromisedPassword(password)
+  } catch {
+    note('/register', 'We could not complete the password security check. Please try again shortly.')
+  }
+  if (compromisedPassword) note('/register', 'This password appears in known data breaches. Choose a different password that you have not used on another service.')
 
   const supabase = await createClient()
   const origin = await getAuthOrigin()
