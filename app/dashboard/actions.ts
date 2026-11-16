@@ -45,6 +45,29 @@ async function requireCompleteOffering(supabase: Awaited<ReturnType<typeof creat
   if (error) return 'Could not verify this course offering.'
   if (!assessments.length) return 'Configure at least one assessment before submitting results.'
   if (!enrollments.length) return 'There are no enrolled students in this course offering.'
+  const { data: sessions, error: sessionError } = await supabase.from('attendance_sessions')
+    .select('id,session_date,session_title').eq('offering_id', offeringId)
+  if (sessionError) return 'Could not verify attendance sessions.'
+  if (!sessions?.length) return 'Record the course attendance register before submitting results.'
+  const { data: attendance, error: attendanceError } = await supabase.from('attendance_records')
+    .select('session_id,student_id,attendance_status').in('session_id', sessions.map((session) => session.id))
+  if (attendanceError) return 'Could not verify the attendance register.'
+  const attendanceByStudent = new Map<string, { present: number; recorded: number }>()
+  for (const record of attendance ?? []) {
+    const current = attendanceByStudent.get(record.student_id) ?? { present: 0, recorded: 0 }
+    current.recorded += 1
+    if (record.attendance_status === 'PRESENT') current.present += 1
+    attendanceByStudent.set(record.student_id, current)
+  }
+  for (const student of enrollments) {
+    const record = attendanceByStudent.get(student.student_id)
+    if (!record || record.recorded !== sessions.length) {
+      return 'Complete every attendance register for every enrolled student before submitting results.'
+    }
+    if ((record.present / sessions.length) * 100 < 80) {
+      return 'A student is below the required 80% attendance threshold and cannot be submitted as examination-eligible.'
+    }
+  }
   const weight = assessments.reduce((sum, item) => sum + Number(item.weight), 0)
   const coursework = assessments.filter((item) => item.assessment_type !== 'EXAM')
   const exams = assessments.filter((item) => item.assessment_type === 'EXAM')
@@ -165,6 +188,40 @@ export async function createAssessment(form: FormData) {
   if (error) say('The assessment was not saved. Check your course assignment and assessment settings.')
   revalidatePath('/dashboard')
   say('Assessment saved.')
+}
+
+export async function recordAttendanceSession(form: FormData) {
+  const { profile, supabase } = await actor(['ADMIN', 'LECTURER'])
+  const offeringId = id(form, 'offering_id')
+  const sessionDate = value(form, 'session_date')
+  const sessionTitle = value(form, 'session_title')
+  if (!validId(offeringId) || !/^\\d{4}-\\d{2}-\\d{2}$/.test(sessionDate) ||
+      !sessionTitle || sessionTitle.length < 2 || sessionTitle.length > 160) {
+    say('Enter a valid session date and title.')
+  }
+  if (profile.role === 'LECTURER' && !(await assigned(supabase, profile.id, offeringId, 'LECTURER'))) {
+    say('You are not assigned to that course offering.')
+  }
+  const { enrollments, error: enrollmentError } = await offeringRows(supabase, offeringId)
+  if (enrollmentError || !enrollments.length) say('No active enrolled students were found for this offering.')
+  const attendance = enrollments.map((student) => ({
+    student_id: student.student_id,
+    attendance_status: value(form, 'attendance-' + student.student_id),
+  }))
+  if (attendance.some((entry) => !['PRESENT', 'ABSENT'].includes(entry.attendance_status))) {
+    say('Select Present or Absent for every enrolled student before saving the register.')
+  }
+  const { error } = await supabase.rpc('record_attendance_session', {
+    p_offering_id: offeringId,
+    p_session_date: sessionDate,
+    p_session_title: sessionTitle,
+    p_attendance: attendance,
+  })
+  if (error) say(error.message.includes('duplicate key')
+    ? 'A session with that date and title already exists.'
+    : 'Attendance could not be saved. Confirm the session date, enrolment and course assignment.')
+  revalidatePath('/dashboard')
+  say('Attendance register saved.')
 }
 
 export async function saveBatchMarks(form: FormData) {
@@ -307,6 +364,22 @@ export async function publishSubmission(form: FormData) {
   if (error) say('The database did not publish these results. Check approval, assessment weights and complete marks.')
   revalidatePath('/dashboard')
   say('Results published. Weighted totals and grades were calculated by the database.')
+}
+
+export async function setSupportTicketStatus(form: FormData) {
+  const { supabase } = await actor(['ADMIN'])
+  const ticketId = id(form, 'ticket_id')
+  const status = value(form, 'status')
+  if (!validId(ticketId) || !['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'].includes(status)) {
+    say('Choose a valid support ticket and status.')
+  }
+  const { error } = await supabase.rpc('admin_update_support_ticket', {
+    p_ticket_id: ticketId,
+    p_status: status,
+  })
+  if (error) say('The support ticket could not be updated. Refresh and try again.')
+  revalidatePath('/dashboard')
+  say('Support ticket status updated.')
 }
 
 export async function createSupportTicket(form: FormData) {

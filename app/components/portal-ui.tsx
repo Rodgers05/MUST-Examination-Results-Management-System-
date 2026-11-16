@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import type { ReactNode } from 'react'
 import type { Profile } from '@/lib/auth'
 import { getStatusAppearance } from '@/lib/status.mjs'
@@ -13,6 +14,7 @@ function WorkspaceLinks({ profile }: { profile: Profile }) {
     {['ADMIN', 'REGISTRAR', 'REVIEWER'].includes(profile.role) && <a href="#reports">Reports</a>}
     {profile.role === 'ADMIN' && <><a href="#access">Account access</a><a href="#audit">Audit trail</a></>}
     <a href="#support">Help and support</a>
+    <Link href="/profile">My profile</Link>
   </>
 }
 
@@ -67,6 +69,9 @@ export function PortalFooter() {
 export function DashboardFrame({ profile, children }: { profile: Profile; children: ReactNode }) {
   const displayName = profile.full_name.trim() || (profile.role === 'ADMIN' ? 'System Administrator' : profile.role.charAt(0) + profile.role.slice(1).toLowerCase())
   const initials = displayName.trim().split(/\s+/).map((word) => word[0]).slice(0, 2).join('').toUpperCase() || 'MU'
+  const avatarUrl = profile.avatar_path && process.env.NEXT_PUBLIC_SUPABASE_URL
+    ? process.env.NEXT_PUBLIC_SUPABASE_URL.replace(/\/$/, '') + '/storage/v1/object/public/profile-avatars/' + profile.avatar_path.split('/').map(encodeURIComponent).join('/')
+    : null
   return <div className="dashboard-shell">
     <aside className="sidebar">
       <MustBrand subtitle="Examination Services" />
@@ -81,7 +86,7 @@ export function DashboardFrame({ profile, children }: { profile: Profile; childr
       </div>
     </aside>
     <div className="dashboard-main">
-      <header className="topbar"><div className="mobile-brand"><MustBrand subtitle="Examination Services" /></div><div className="topbar-title"><span className="crumb">MUST / {profile.role} workspace</span><strong>Examination Results Management System</strong></div><div className="userbar"><span className="avatar" aria-hidden="true">{initials}</span><span className="user-meta"><strong>{displayName}</strong><small>{profile.role}</small><StatusBadge value={profile.account_status} /></span></div></header>
+      <header className="topbar"><div className="mobile-brand"><MustBrand subtitle="Examination Services" /></div><div className="topbar-title"><span className="crumb">MUST / {profile.role} workspace</span><strong>Examination Results Management System</strong></div><Link className="userbar" href="/profile" aria-label="Open my profile"><span className="avatar" aria-hidden="true">{avatarUrl ? <Image src={avatarUrl} alt="" width={40} height={40} unoptimized /> : initials}</span><span className="user-meta"><strong>{displayName}</strong><small>{profile.role}</small><StatusBadge value={profile.account_status} /></span></Link></header>
       <div className="mobile-nav"><details><summary>Workspace menu</summary><nav aria-label="Mobile workspace navigation"><WorkspaceLinks profile={profile} /></nav></details></div>
       {children}
       <PortalFooter />

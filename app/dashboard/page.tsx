@@ -7,6 +7,7 @@ import {
   createAssessment,
   createCatalogueRecord,
   createSupportTicket,
+  setSupportTicketStatus,
   publishSubmission,
   resubmitResults,
   reviewSubmission,
@@ -316,7 +317,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
             <Card id="support" title="Help and support" note="Your ticket is visible to you and the administrator.">
               <form action={createSupportTicket} className="form-grid"><div className="field"><label>Subject</label><input name="subject" minLength={4} maxLength={160} required /></div><div className="field"><label>Message</label><textarea name="message" minLength={10} maxLength={4000} required /></div><button>Send support request</button></form>
-              {ticketsResult.rows.length ? <Table headings={['Subject', 'Message', 'Status', 'Created']}>{ticketsResult.rows.map((ticket) => <tr key={uid(ticket)}><td>{text(ticket, 'subject')}</td><td>{text(ticket, 'message')}</td><td>{status(text(ticket, 'status'))}</td><td>{date(ticket.created_at)}</td></tr>)}</Table> : <Empty>No support requests yet.</Empty>}
+              {ticketsResult.rows.length ? <Table headings={profile.role === 'ADMIN' ? ['Subject', 'Message', 'Status', 'Created', 'Admin action'] : ['Subject', 'Message', 'Status', 'Created']}>{ticketsResult.rows.map((ticket) => <tr key={uid(ticket)}><td>{text(ticket, 'subject')}</td><td>{text(ticket, 'message')}</td><td>{status(text(ticket, 'status'))}</td><td>{date(ticket.created_at)}</td>{profile.role === 'ADMIN' && <td><form action={setSupportTicketStatus} className="inline-form"><input type="hidden" name="ticket_id" value={uid(ticket)} /><select name="status" defaultValue={text(ticket, 'status')} aria-label={'Update status for ' + text(ticket, 'subject')}><option value="OPEN">Open</option><option value="IN_PROGRESS">In progress</option><option value="RESOLVED">Resolved</option><option value="CLOSED">Closed</option></select><button type="submit">Update</button></form></td>}</tr>)}</Table> : <Empty>No support requests yet.</Empty>}
             </Card>
           </div>
         </main>

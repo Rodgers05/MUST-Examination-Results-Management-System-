@@ -5,6 +5,7 @@ import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { isValidEmail, isValidPassword } from '@/lib/validation.mjs'
 import { safeAppPath } from '@/lib/redirects.mjs'
+import { isCompromisedPassword } from '@/lib/password-security.mjs'
 import { resolveAuthOrigin } from '@/lib/request-origin.mjs'
 
 async function getAuthOrigin() {
@@ -41,6 +42,13 @@ export async function register(formData: FormData) {
   if (fullName.length < 2 || fullName.length > 120) note('/register', 'Enter your name (2–120 characters).')
   if (!isValidEmail(email)) note('/register', 'Enter a valid email address.')
   if (!isValidPassword(password)) note('/register', 'Use at least 12 characters, including an uppercase letter, a lowercase letter and a number.')
+  let compromisedPassword = false
+  try {
+    compromisedPassword = await isCompromisedPassword(password)
+  } catch {
+    note('/register', 'We could not complete the password security check. Please try again shortly.')
+  }
+  if (compromisedPassword) note('/register', 'This password appears in known data breaches. Choose a different password that you have not used on another service.')
 
   const supabase = await createClient()
   const origin = await getAuthOrigin()
@@ -65,10 +73,10 @@ export async function login(formData: FormData) {
   const email = String(formData.get('email') ?? '').trim().toLowerCase()
   const password = String(formData.get('password') ?? '')
   const next = safeAppPath(formData.get('next'))
-  if (!isValidEmail(email) || !password) note('/login', 'Enter a valid email address and your password.')
+  if (!password) note('/login', 'Enter your password.')
 
   const supabase = await createClient()
-  const { error } = await supabase.auth.signInWithPassword({ email, password })
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
   if (error) {
     if (error.code === 'email_not_confirmed') {
       note('/login', 'Your email address has not been verified. Open the confirmation email and follow its link. If you never received it, use the resend option on the registration page.')
@@ -85,19 +93,13 @@ export async function login(formData: FormData) {
     note('/login', 'The authentication service could not complete sign-in. Please try again shortly or contact the system administrator.')
   }
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = data.user
   if (!user?.email_confirmed_at) {
     await supabase.auth.signOut()
     note('/login', 'Verify your email address before signing in.')
   }
 
-  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims()
-  const claims = claimsData?.claims
-  if (claimsError || !claims || typeof claims.sub !== 'string') {
-    await supabase.auth.signOut()
-    note('/login', 'Your session could not be verified. Try again.')
-  }
-  const userId = claims.sub
+  const userId = user.id
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -138,7 +140,7 @@ export async function logout() {
 
 export async function resendSignupConfirmation(formData: FormData) {
   const email = String(formData.get('email') ?? '').trim().toLowerCase()
-  if (!isValidEmail(email)) note('/register', 'Enter a valid email address.')
+  if (!isValidEmail(email)) note('/register', 'Enter the valid email address used during registration.')
 
   const supabase = await createClient()
   const origin = await getAuthOrigin()

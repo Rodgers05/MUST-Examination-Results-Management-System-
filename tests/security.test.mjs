@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
-import { isValidEmail, isValidPassword, hasRole, validateBatchMarks } from '../lib/validation.mjs'
+import { isMustInstitutionalEmail, isValidEmail, isValidPassword, hasRole, validateBatchMarks } from '../lib/validation.mjs'
 import { resolveAuthOrigin } from '../lib/request-origin.mjs'
 import { safeAppPath } from '../lib/redirects.mjs'
 import { getStatusAppearance } from '../lib/status.mjs'
@@ -33,10 +33,12 @@ test('status badges use explicit status mappings and keep unknown values neutral
   assert.deepEqual(getStatusAppearance(null), { label: 'Unknown', tone: 'neutral' })
 })
 
-test('email validation accepts any normal email domain and rejects malformed addresses', () => {
+test('email syntax validation accepts normal domains; the MUST helper remains exact when needed', () => {
   for (const email of ['person@must.ac.ug', 'person@std.must.ac.ug', 'PERSON@MUST.AC.UG', 'person@gmail.com', 'person@outlook.com', 'person@yahoo.co.uk']) {
     assert.equal(isValidEmail(email), true, email)
   }
+  for (const email of ['person@gmail.com', 'person@outlook.com', 'person@yahoo.co.uk']) assert.equal(isMustInstitutionalEmail(email), false, email)
+  for (const email of ['person@must.ac.ug', 'person@std.must.ac.ug']) assert.equal(isMustInstitutionalEmail(email), true, email)
   for (const email of ['', 'person', 'person@', '@gmail.com', 'person gmail@gmail.com', 'person@gmail', 'a'.repeat(250) + '@gmail.com']) {
     assert.equal(isValidEmail(email), false, email)
   }
@@ -116,7 +118,7 @@ test('batch mark validation enforces maximums, enrolment and unique student-asse
 })
 
 test('server contract uses verified claims, role gates, email verification and Google OAuth', async () => {
-  const [authActions, auth, proxy, actions, dashboard, browserClient, loginPage, registerPage] = await Promise.all([
+  const [authActions, auth, proxy, actions, dashboard, browserClient, loginPage, registerPage, callback, profilePage, passwordField, passwordActions, nextConfig] = await Promise.all([
     readFile(new URL('../app/auth-actions.ts', import.meta.url), 'utf8'),
     readFile(new URL('../lib/auth.ts', import.meta.url), 'utf8'),
     readFile(new URL('../proxy.ts', import.meta.url), 'utf8'),
@@ -125,6 +127,11 @@ test('server contract uses verified claims, role gates, email verification and G
     readFile(new URL('../lib/supabase/client.ts', import.meta.url), 'utf8'),
     readFile(new URL('../app/login/page.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../app/register/page.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../app/auth/callback/route.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../app/profile/page.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../app/components/password-field.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../app/auth/password-actions.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../next.config.ts', import.meta.url), 'utf8'),
   ])
   assert.match(auth, /auth\.getClaims\(\)/)
   assert.match(proxy, /auth\.getClaims\(\)/)
@@ -134,6 +141,12 @@ test('server contract uses verified claims, role gates, email verification and G
   assert.match(authActions, /await headers\(\)/)
   assert.match(authActions, /email_provider_disabled/)
   assert.match(authActions, /email_confirmed_at/)
+  assert.doesNotMatch(authActions.split('export async function register')[1].split('export async function login')[0], /isMustInstitutionalEmail/)
+  assert.doesNotMatch(authActions.split('export async function login')[1].split('export async function googleSignIn')[0], /isMustInstitutionalEmail/)
+  assert.match(authActions, /isCompromisedPassword\(password\)/)
+  assert.match(authActions, /This password appears in known data breaches/)
+  assert.doesNotMatch(auth, /isMustInstitutionalEmail/)
+  assert.doesNotMatch(callback, /isMustInstitutionalEmail/)
   assert.match(authActions, /signInWithOAuth\([\s\S]*provider: 'google'/)
   assert.doesNotMatch(authActions, /NEXT_PUBLIC_GOOGLE_OAUTH_ENABLED/)
   assert.match(authActions, /data: \{ full_name: fullName \}/)
@@ -150,8 +163,18 @@ test('server contract uses verified claims, role gates, email verification and G
   assert.match(actions, /submission\.status !== 'APPROVED'/)
   assert.match(loginPage, /Continue with Google/)
   assert.match(loginPage, /Email address/)
+  assert.match(passwordField, /Show password/)
+  assert.match(passwordField, /Hide password/)
+  assert.match(profilePage, /uploadProfileAvatar/)
+  assert.match(nextConfig, /bodySizeLimit: '3mb'/)
+  assert.match(profilePage, /publication_status', 'PUBLISHED'/)
+  assert.match(profilePage, /My profile/)
+  assert.ok(profilePage.includes('auth/logout'))
+  assert.match(passwordActions, /resetPasswordForEmail/)
+  assert.ok(passwordActions.includes('updateUser({ password })'))
   assert.match(registerPage, /Use any valid email address/)
-  assert.doesNotMatch(loginPage + registerPage, /institutional email|MUST email|Only @must\.ac\.ug/)
+  assert.doesNotMatch(authActions, /isMustInstitutionalEmail/)
+  assert.match(registerPage, /you@example[.]com/)
 })
 
 test('repository ignore rules cover local credentials, backups and frontend snapshots', async () => {
@@ -230,4 +253,47 @@ test('shared MUST presentation keeps role navigation, mobile navigation and work
   assert.match(styles, /@media\(max-width:360px\)/)
   assert.match(styles, /overflow-x:auto/)
   assert.match(styles, /prefers-reduced-motion:reduce/)
+  assert.doesNotMatch(styles, /\\n\\s*$/)
+})
+
+test('attendance register is access-controlled and blocks result submission below 80 percent', async () => {
+  const [actions, lecturer, migration] = await Promise.all([
+    readFile(new URL('../app/dashboard/actions.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../app/dashboard/lecturer/page.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../supabase/migrations/20261116170000_attendance_register_and_exam_eligibility.sql', import.meta.url), 'utf8'),
+  ])
+  assert.match(actions, /record_attendance_session/)
+  assert.match(actions, /attendance_sessions/)
+  assert.match(actions, /attendance_records/)
+  assert.match(actions, /present \/ sessions\.length\) \* 100 < 80/)
+  assert.match(lecturer, /Save complete attendance register/)
+  assert.match(lecturer, /80% attendance/)
+  assert.match(migration, /enable row level security/i)
+  assert.match(migration, /revoke insert, update, delete/i)
+  assert.match(migration, /result_submission_attendance_eligibility/)
+  assert.match(migration, /at least 80 percent attendance/i)
+  assert.match(migration, /private\.is_assigned/)
+})
+
+test('support tickets can be triaged only through the audited administrator RPC', async () => {
+  const [actions, dashboard, migration] = await Promise.all([
+    readFile(new URL('../app/dashboard/actions.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../app/dashboard/page.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../supabase/migrations/20261116171000_admin_support_ticket_workflow.sql', import.meta.url), 'utf8'),
+  ])
+  assert.match(actions, /actor\(\['ADMIN'\]\)/)
+  assert.match(actions, /admin_update_support_ticket/)
+  assert.match(dashboard, /setSupportTicketStatus/)
+  assert.match(migration, /private\.is_admin\(\)/)
+  assert.match(migration, /SUPPORT_TICKET_STATUS_UPDATED/)
+  assert.match(migration, /revoke all on function public\.admin_update_support_ticket/)
+})
+
+test('student profile shows live attendance and examination eligibility from enrolled course registers', async () => {
+  const profile = await readFile(new URL('../app/profile/page.tsx', import.meta.url), 'utf8')
+  assert.match(profile, /attendance_sessions/)
+  assert.match(profile, /attendance_records/)
+  assert.match(profile, /enrollments/)
+  assert.match(profile, /Attendance and examination eligibility/)
+  assert.match(profile, /item\.percentage >= 80/)
 })
