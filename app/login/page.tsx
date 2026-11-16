@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { login, googleSignIn } from '@/app/auth-actions'
-import { PortalFooter, PortalHeader } from '@/app/components/portal-ui'\nimport { PasswordField } from '@/app/components/password-field'
+import { PortalFooter, PortalHeader } from '@/app/components/portal-ui'
+import { PasswordField } from '@/app/components/password-field'
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ notice?: string; next?: string }> }) {
   const { notice, next } = await searchParams
