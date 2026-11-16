@@ -142,3 +142,61 @@ $function$;
 
 revoke all on function public.record_attendance_session(uuid, date, text, jsonb) from public, anon;
 grant execute on function public.record_attendance_session(uuid, date, text, jsonb) to authenticated;
+
+-- Enforce attendance eligibility inside PostgreSQL as well as the application.
+-- This prevents direct API/RPC calls from bypassing the 80% requirement.
+create or replace function public.enforce_attendance_before_result_submission()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  v_session_count integer;
+  v_enrolled_count integer;
+begin
+  if new.status <> 'SUBMITTED' then
+    return new;
+  end if;
+
+  select count(*) into v_session_count
+  from public.attendance_sessions s
+  where s.offering_id = new.offering_id;
+
+  if v_session_count = 0 then
+    raise exception 'Results cannot be submitted until attendance sessions have been recorded';
+  end if;
+
+  select count(*) into v_enrolled_count
+  from public.enrollments e
+  where e.offering_id = new.offering_id and e.enrollment_status = 'ENROLLED';
+
+  if v_enrolled_count = 0 then
+    raise exception 'Results cannot be submitted without enrolled students';
+  end if;
+
+  if exists (
+    select 1
+    from public.enrollments e
+    left join public.attendance_sessions s on s.offering_id = e.offering_id
+    left join public.attendance_records r
+      on r.session_id = s.id and r.student_id = e.student_id
+    where e.offering_id = new.offering_id and e.enrollment_status = 'ENROLLED'
+    group by e.student_id
+    having count(distinct s.id) <> v_session_count
+       or count(r.id) <> v_session_count
+       or count(r.id) filter (where r.attendance_status = 'PRESENT')::numeric
+            / v_session_count::numeric < 0.80
+  ) then
+    raise exception 'Every enrolled student must have a complete attendance record and at least 80 percent attendance before results can be submitted';
+  end if;
+
+  return new;
+end;
+$function$;
+
+revoke all on function public.enforce_attendance_before_result_submission() from public, anon, authenticated;
+
+create trigger result_submission_attendance_eligibility
+before insert or update of status on public.result_submissions
+for each row execute function public.enforce_attendance_before_result_submission();
