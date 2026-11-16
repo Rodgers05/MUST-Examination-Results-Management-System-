@@ -93,19 +93,13 @@ export async function login(formData: FormData) {
     note('/login', 'The authentication service could not complete sign-in. Please try again shortly or contact the system administrator.')
   }
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = data.user
   if (!user?.email_confirmed_at) {
     await supabase.auth.signOut()
     note('/login', 'Verify your email address before signing in.')
   }
 
-  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims()
-  const claims = claimsData?.claims
-  if (claimsError || !claims || typeof claims.sub !== 'string') {
-    await supabase.auth.signOut()
-    note('/login', 'Your session could not be verified. Try again.')
-  }
-  const userId = claims.sub
+  const userId = user.id
 
   const { data: profile } = await supabase
     .from('profiles')
