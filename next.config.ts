@@ -6,6 +6,10 @@ const projectRoot = path.dirname(fileURLToPath(import.meta.url))
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  experimental: {
+    // Allow the multipart envelope around a validated 2 MB profile image.
+    serverActions: { bodySizeLimit: '3mb' },
+  },
   outputFileTracingRoot: projectRoot,
   turbopack: {
     root: projectRoot,
