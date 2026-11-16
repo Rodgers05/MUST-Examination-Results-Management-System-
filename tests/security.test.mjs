@@ -33,7 +33,7 @@ test('status badges use explicit status mappings and keep unknown values neutral
   assert.deepEqual(getStatusAppearance(null), { label: 'Unknown', tone: 'neutral' })
 })
 
-test('email syntax validation accepts normal email domains and MUST validation restricts registration', () => {
+test('email syntax validation accepts normal domains; the MUST helper remains exact when needed', () => {
   for (const email of ['person@must.ac.ug', 'person@std.must.ac.ug', 'PERSON@MUST.AC.UG', 'person@gmail.com', 'person@outlook.com', 'person@yahoo.co.uk']) {
     assert.equal(isValidEmail(email), true, email)
   }
@@ -118,7 +118,7 @@ test('batch mark validation enforces maximums, enrolment and unique student-asse
 })
 
 test('server contract uses verified claims, role gates, email verification and Google OAuth', async () => {
-  const [authActions, auth, proxy, actions, dashboard, browserClient, loginPage, registerPage, callback] = await Promise.all([
+  const [authActions, auth, proxy, actions, dashboard, browserClient, loginPage, registerPage, callback, profilePage, passwordField, passwordActions] = await Promise.all([
     readFile(new URL('../app/auth-actions.ts', import.meta.url), 'utf8'),
     readFile(new URL('../lib/auth.ts', import.meta.url), 'utf8'),
     readFile(new URL('../proxy.ts', import.meta.url), 'utf8'),
@@ -127,7 +127,7 @@ test('server contract uses verified claims, role gates, email verification and G
     readFile(new URL('../lib/supabase/client.ts', import.meta.url), 'utf8'),
     readFile(new URL('../app/login/page.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../app/register/page.tsx', import.meta.url), 'utf8'),
-    readFile(new URL('../app/auth/callback/route.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../app/auth/callback/route.ts', import.meta.url), 'utf8'),\n    readFile(new URL('../app/profile/page.tsx', import.meta.url), 'utf8'),\n    readFile(new URL('../app/components/password-field.tsx', import.meta.url), 'utf8'),\n    readFile(new URL('../app/auth/password-actions.ts', import.meta.url), 'utf8'),
   ])
   assert.match(auth, /auth\.getClaims\(\)/)
   assert.match(proxy, /auth\.getClaims\(\)/)
@@ -158,7 +158,7 @@ test('server contract uses verified claims, role gates, email verification and G
   assert.match(actions, /submission\.status !== 'UNDER_REVIEW'/)
   assert.match(actions, /submission\.status !== 'APPROVED'/)
   assert.match(loginPage, /Continue with Google/)
-  assert.match(loginPage, /Email address/)
+  assert.match(loginPage, /Email address/)\n  assert.match(passwordField, /Show password/)\n  assert.match(passwordField, /Hide password/)\n  assert.match(profilePage, /uploadProfileAvatar/)\n  assert.match(profilePage, /publication_status', 'PUBLISHED'/)\n  assert.match(profilePage, /My profile/)\n  assert.match(profilePage, /auth\\/logout/)\n  assert.match(passwordActions, /resetPasswordForEmail/)\n  assert.match(passwordActions, /updateUser\\(\\{ password \\}\\)/)
   assert.match(registerPage, /Use any valid email address/)
   assert.doesNotMatch(authActions, /isMustInstitutionalEmail/)
   assert.match(registerPage, /you@example[.]com/)
