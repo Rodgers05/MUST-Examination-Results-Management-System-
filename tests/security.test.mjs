@@ -288,3 +288,12 @@ test('support tickets can be triaged only through the audited administrator RPC'
   assert.match(migration, /SUPPORT_TICKET_STATUS_UPDATED/)
   assert.match(migration, /revoke all on function public\.admin_update_support_ticket/)
 })
+
+test('student profile shows live attendance and examination eligibility from enrolled course registers', async () => {
+  const profile = await readFile(new URL('../app/profile/page.tsx', import.meta.url), 'utf8')
+  assert.match(profile, /attendance_sessions/)
+  assert.match(profile, /attendance_records/)
+  assert.match(profile, /enrollments/)
+  assert.match(profile, /Attendance and examination eligibility/)
+  assert.match(profile, /item\.percentage >= 80/)
+})
