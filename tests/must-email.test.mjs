@@ -5,7 +5,7 @@ import { hasRole, isMustInstitutionalEmail, isValidEmail, validateBatchMarks } f
 test('accepts MUST institutional domains', () => {
   assert.equal(isMustInstitutionalEmail('student@std.must.ac.ug'), true)
   assert.equal(isMustInstitutionalEmail('staff@must.ac.ug'), true)
-  assert.equal(isMustInstitutionalEmail('student@department.must.ac.ug'), true)
+  assert.equal(isMustInstitutionalEmail('student@department.must.ac.ug'), false)
 })
 
 test('rejects personal, malformed and lookalike domains', () => {
@@ -13,7 +13,7 @@ test('rejects personal, malformed and lookalike domains', () => {
     'person@gmail.com',
     'person@yahoo.com',
     'person@must.ac.ug.example.com',
-    'person@notmust.ac.ug',
+    'person@notmust.ac.ug',\n    'person@department.must.ac.ug',
     'person@must.ac.ug.evil',
     'plain-text',
     '',
