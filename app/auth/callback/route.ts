@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { safeAppPath } from '@/lib/redirects.mjs'
+import { isMustInstitutionalEmail } from '@/lib/validation.mjs'
 
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get('code')
@@ -13,7 +14,7 @@ export async function GET(request: NextRequest) {
     if (!exchangeError) {
       const { data: { user }, error: userError } = await supabase.auth.getUser()
 
-      if (!userError && user?.email_confirmed_at) {
+      if (!userError && user?.email_confirmed_at && isMustInstitutionalEmail(user.email)) {
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('account_status')
