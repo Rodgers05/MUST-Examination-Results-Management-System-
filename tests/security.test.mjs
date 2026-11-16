@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
-import { isValidEmail, isValidPassword, hasRole, validateBatchMarks } from '../lib/validation.mjs'
+import { isMustInstitutionalEmail, isValidEmail, isValidPassword, hasRole, validateBatchMarks } from '../lib/validation.mjs'
 import { resolveAuthOrigin } from '../lib/request-origin.mjs'
 import { safeAppPath } from '../lib/redirects.mjs'
 import { getStatusAppearance } from '../lib/status.mjs'
@@ -33,10 +33,12 @@ test('status badges use explicit status mappings and keep unknown values neutral
   assert.deepEqual(getStatusAppearance(null), { label: 'Unknown', tone: 'neutral' })
 })
 
-test('email validation accepts any normal email domain and rejects malformed addresses', () => {
+test('email syntax validation accepts normal email domains and MUST validation restricts registration', () => {
   for (const email of ['person@must.ac.ug', 'person@std.must.ac.ug', 'PERSON@MUST.AC.UG', 'person@gmail.com', 'person@outlook.com', 'person@yahoo.co.uk']) {
     assert.equal(isValidEmail(email), true, email)
   }
+  for (const email of ['person@gmail.com', 'person@outlook.com', 'person@yahoo.co.uk']) assert.equal(isMustInstitutionalEmail(email), false, email)
+  for (const email of ['person@must.ac.ug', 'person@std.must.ac.ug']) assert.equal(isMustInstitutionalEmail(email), true, email)
   for (const email of ['', 'person', 'person@', '@gmail.com', 'person gmail@gmail.com', 'person@gmail', 'a'.repeat(250) + '@gmail.com']) {
     assert.equal(isValidEmail(email), false, email)
   }
