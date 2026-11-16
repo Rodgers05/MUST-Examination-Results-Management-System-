@@ -275,3 +275,17 @@ test('attendance register is access-controlled and blocks result submission belo
   assert.match(migration, /at least 80 percent attendance/i)
   assert.match(migration, /private\.is_assigned/)
 })
+
+test('support tickets can be triaged only through the audited administrator RPC', async () => {
+  const [actions, dashboard, migration] = await Promise.all([
+    readFile(new URL('../app/dashboard/actions.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../app/dashboard/page.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../supabase/migrations/20261116171000_admin_support_ticket_workflow.sql', import.meta.url), 'utf8'),
+  ])
+  assert.match(actions, /actor\(\['ADMIN'\]\)/)
+  assert.match(actions, /admin_update_support_ticket/)
+  assert.match(dashboard, /setSupportTicketStatus/)
+  assert.match(migration, /private\.is_admin\(\)/)
+  assert.match(migration, /SUPPORT_TICKET_STATUS_UPDATED/)
+  assert.match(migration, /revoke all on function public\.admin_update_support_ticket/)
+})
