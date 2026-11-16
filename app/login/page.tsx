@@ -17,7 +17,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <button type="submit">Sign in securely</button>
         </form>
         <div className="auth-divider"><span>OR</span></div>
-        <form action={googleSignIn}><button type="submit" className="secondary">Continue with Google (MUST accounts only)</button></form>
+        <form action={googleSignIn}><button type="submit" className="secondary">Continue with Google</button></form>
         <p className="auth-foot">New student? <Link href="/register">Create an account</Link>. New accounts require email verification and administrator approval. <a href="https://www.must.ac.ug/" target="_blank" rel="noreferrer">MUST website</a>.</p>
       </div></section>
     </main><PortalFooter /></>
