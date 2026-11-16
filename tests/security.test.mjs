@@ -118,7 +118,7 @@ test('batch mark validation enforces maximums, enrolment and unique student-asse
 })
 
 test('server contract uses verified claims, role gates, email verification and Google OAuth', async () => {
-  const [authActions, auth, proxy, actions, dashboard, browserClient, loginPage, registerPage, callback, profilePage, passwordField, passwordActions] = await Promise.all([
+  const [authActions, auth, proxy, actions, dashboard, browserClient, loginPage, registerPage, callback, profilePage, passwordField, passwordActions, nextConfig] = await Promise.all([
     readFile(new URL('../app/auth-actions.ts', import.meta.url), 'utf8'),
     readFile(new URL('../lib/auth.ts', import.meta.url), 'utf8'),
     readFile(new URL('../proxy.ts', import.meta.url), 'utf8'),
@@ -131,6 +131,7 @@ test('server contract uses verified claims, role gates, email verification and G
     readFile(new URL('../app/profile/page.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../app/components/password-field.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../app/auth/password-actions.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../next.config.ts', import.meta.url), 'utf8'),
   ])
   assert.match(auth, /auth\.getClaims\(\)/)
   assert.match(proxy, /auth\.getClaims\(\)/)
@@ -165,6 +166,7 @@ test('server contract uses verified claims, role gates, email verification and G
   assert.match(passwordField, /Show password/)
   assert.match(passwordField, /Hide password/)
   assert.match(profilePage, /uploadProfileAvatar/)
+  assert.match(nextConfig, /bodySizeLimit: '3mb'/)
   assert.match(profilePage, /publication_status', 'PUBLISHED'/)
   assert.match(profilePage, /My profile/)
   assert.ok(profilePage.includes('auth/logout'))
