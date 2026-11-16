@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { isMustInstitutionalEmail } from '@/lib/validation.mjs'
 
 export type AppRole = 'ADMIN' | 'LECTURER' | 'REVIEWER' | 'REGISTRAR' | 'STUDENT'
 export type AccountStatus = 'PENDING' | 'ACTIVE' | 'SUSPENDED'
@@ -28,7 +29,7 @@ export async function getProfile(): Promise<Profile | null> {
     .eq('id', userId)
     .maybeSingle()
 
-  if (error || !data) return null
+  if (error || !data || !isMustInstitutionalEmail(data.institutional_email)) return null
   return data as Profile
 }
 
