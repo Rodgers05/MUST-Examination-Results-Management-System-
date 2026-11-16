@@ -180,8 +180,7 @@ test('server contract uses verified claims, role gates, email verification and G
 test('repository ignore rules cover local credentials, backups and frontend snapshots', async () => {
   const ignore = await readFile(new URL('../.gitignore', import.meta.url), 'utf8')
   for (const rule of ['.env', '.env.*', '!.env.example', 'node_modules/', '.next/', '.vercel/', 'backups/', 'frontend_backup_*/', 'frontend/*.before-*', 'frontend/*.backup.*', '*.dump', '*.backup.sql']) {
-    assert.ok(ignore.split(/\r?
-/).includes(rule), 'Missing ignore rule: ' + rule)
+    assert.ok(ignore.split(/\r?\n/).includes(rule), 'Missing ignore rule: ' + rule)
   }
 })
 
