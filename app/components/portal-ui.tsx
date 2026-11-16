@@ -12,7 +12,8 @@ function WorkspaceLinks({ profile }: { profile: Profile }) {
     {profile.role === 'STUDENT' && <a href="#results">Published results</a>}
     {['ADMIN', 'REGISTRAR', 'REVIEWER'].includes(profile.role) && <a href="#reports">Reports</a>}
     {profile.role === 'ADMIN' && <><a href="#access">Account access</a><a href="#audit">Audit trail</a></>}
-    <a href="#support">Help and support</a>\n    <Link href="/profile">My profile</Link>
+    <a href="#support">Help and support</a>
+    <Link href="/profile">My profile</Link>
   </>
 }
 
