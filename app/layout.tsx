@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { ThemeBootstrap } from '@/app/components/theme-bootstrap'
 
 export const metadata: Metadata = {
   title: 'MUST | Examination Results Management System',
@@ -7,5 +8,5 @@ export const metadata: Metadata = {
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body>{children}</body></html>
+  return <html lang="en" data-theme="system"><body><ThemeBootstrap />{children}</body></html>
 }
