@@ -127,7 +127,10 @@ test('server contract uses verified claims, role gates, email verification and G
     readFile(new URL('../lib/supabase/client.ts', import.meta.url), 'utf8'),
     readFile(new URL('../app/login/page.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../app/register/page.tsx', import.meta.url), 'utf8'),
-    readFile(new URL('../app/auth/callback/route.ts', import.meta.url), 'utf8'),\n    readFile(new URL('../app/profile/page.tsx', import.meta.url), 'utf8'),\n    readFile(new URL('../app/components/password-field.tsx', import.meta.url), 'utf8'),\n    readFile(new URL('../app/auth/password-actions.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../app/auth/callback/route.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../app/profile/page.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../app/components/password-field.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../app/auth/password-actions.ts', import.meta.url), 'utf8'),
   ])
   assert.match(auth, /auth\.getClaims\(\)/)
   assert.match(proxy, /auth\.getClaims\(\)/)
@@ -158,7 +161,15 @@ test('server contract uses verified claims, role gates, email verification and G
   assert.match(actions, /submission\.status !== 'UNDER_REVIEW'/)
   assert.match(actions, /submission\.status !== 'APPROVED'/)
   assert.match(loginPage, /Continue with Google/)
-  assert.match(loginPage, /Email address/)\n  assert.match(passwordField, /Show password/)\n  assert.match(passwordField, /Hide password/)\n  assert.match(profilePage, /uploadProfileAvatar/)\n  assert.match(profilePage, /publication_status', 'PUBLISHED'/)\n  assert.match(profilePage, /My profile/)\n  assert.match(profilePage, /auth\\/logout/)\n  assert.match(passwordActions, /resetPasswordForEmail/)\n  assert.match(passwordActions, /updateUser\\(\\{ password \\}\\)/)
+  assert.match(loginPage, /Email address/)
+  assert.match(passwordField, /Show password/)
+  assert.match(passwordField, /Hide password/)
+  assert.match(profilePage, /uploadProfileAvatar/)
+  assert.match(profilePage, /publication_status', 'PUBLISHED'/)
+  assert.match(profilePage, /My profile/)
+  assert.ok(profilePage.includes('auth/logout'))
+  assert.match(passwordActions, /resetPasswordForEmail/)
+  assert.ok(passwordActions.includes('updateUser({ password })'))
   assert.match(registerPage, /Use any valid email address/)
   assert.doesNotMatch(authActions, /isMustInstitutionalEmail/)
   assert.match(registerPage, /you@example[.]com/)
@@ -167,7 +178,8 @@ test('server contract uses verified claims, role gates, email verification and G
 test('repository ignore rules cover local credentials, backups and frontend snapshots', async () => {
   const ignore = await readFile(new URL('../.gitignore', import.meta.url), 'utf8')
   for (const rule of ['.env', '.env.*', '!.env.example', 'node_modules/', '.next/', '.vercel/', 'backups/', 'frontend_backup_*/', 'frontend/*.before-*', 'frontend/*.backup.*', '*.dump', '*.backup.sql']) {
-    assert.ok(ignore.split(/\r?\n/).includes(rule), 'Missing ignore rule: ' + rule)
+    assert.ok(ignore.split(/\r?
+/).includes(rule), 'Missing ignore rule: ' + rule)
   }
 })
 
