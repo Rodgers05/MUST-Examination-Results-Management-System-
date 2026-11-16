@@ -73,7 +73,6 @@ export async function login(formData: FormData) {
   const email = String(formData.get('email') ?? '').trim().toLowerCase()
   const password = String(formData.get('password') ?? '')
   const next = safeAppPath(formData.get('next'))
-  if (!isMustInstitutionalEmail(email)) note('/login', 'Only MUST institutional email addresses can sign in. Contact the examinations administrator if your institutional address needs to be updated.')
   if (!password) note('/login', 'Enter your password.')
 
   const supabase = await createClient()
