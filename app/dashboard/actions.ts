@@ -366,6 +366,22 @@ export async function publishSubmission(form: FormData) {
   say('Results published. Weighted totals and grades were calculated by the database.')
 }
 
+export async function setSupportTicketStatus(form: FormData) {
+  const { supabase } = await actor(['ADMIN'])
+  const ticketId = id(form, 'ticket_id')
+  const status = value(form, 'status')
+  if (!validId(ticketId) || !['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'].includes(status)) {
+    say('Choose a valid support ticket and status.')
+  }
+  const { error } = await supabase.rpc('admin_update_support_ticket', {
+    p_ticket_id: ticketId,
+    p_status: status,
+  })
+  if (error) say('The support ticket could not be updated. Refresh and try again.')
+  revalidatePath('/dashboard')
+  say('Support ticket status updated.')
+}
+
 export async function createSupportTicket(form: FormData) {
   const { profile, supabase } = await actor(roles)
   const subject = value(form, 'subject')
