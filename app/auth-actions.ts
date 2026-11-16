@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { isValidEmail, isValidPassword } from '@/lib/validation.mjs'
+import { isMustInstitutionalEmail, isValidEmail, isValidPassword } from '@/lib/validation.mjs'
 import { safeAppPath } from '@/lib/redirects.mjs'
 import { resolveAuthOrigin } from '@/lib/request-origin.mjs'
 
@@ -39,7 +39,7 @@ export async function register(formData: FormData) {
   const email = String(formData.get('email') ?? '').trim().toLowerCase()
   const password = String(formData.get('password') ?? '')
   if (fullName.length < 2 || fullName.length > 120) note('/register', 'Enter your name (2–120 characters).')
-  if (!isValidEmail(email)) note('/register', 'Enter a valid email address.')
+  if (!isMustInstitutionalEmail(email)) note('/register', 'Use your MUST institutional email address (for example, your @std.must.ac.ug or other @must.ac.ug address). Personal email addresses are not accepted.')
   if (!isValidPassword(password)) note('/register', 'Use at least 12 characters, including an uppercase letter, a lowercase letter and a number.')
 
   const supabase = await createClient()
@@ -138,7 +138,7 @@ export async function logout() {
 
 export async function resendSignupConfirmation(formData: FormData) {
   const email = String(formData.get('email') ?? '').trim().toLowerCase()
-  if (!isValidEmail(email)) note('/register', 'Enter a valid email address.')
+  if (!isMustInstitutionalEmail(email)) note('/register', 'Use your MUST institutional email address. Personal email addresses are not accepted.')
 
   const supabase = await createClient()
   const origin = await getAuthOrigin()
