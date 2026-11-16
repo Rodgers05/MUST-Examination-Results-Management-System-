@@ -12,7 +12,7 @@ function WorkspaceLinks({ profile }: { profile: Profile }) {
     {profile.role === 'STUDENT' && <a href="#results">Published results</a>}
     {['ADMIN', 'REGISTRAR', 'REVIEWER'].includes(profile.role) && <a href="#reports">Reports</a>}
     {profile.role === 'ADMIN' && <><a href="#access">Account access</a><a href="#audit">Audit trail</a></>}
-    <a href="#support">Help and support</a>
+    <a href="#support">Help and support</a>\n    <Link href="/profile">My profile</Link>
   </>
 }
 
@@ -81,7 +81,7 @@ export function DashboardFrame({ profile, children }: { profile: Profile; childr
       </div>
     </aside>
     <div className="dashboard-main">
-      <header className="topbar"><div className="mobile-brand"><MustBrand subtitle="Examination Services" /></div><div className="topbar-title"><span className="crumb">MUST / {profile.role} workspace</span><strong>Examination Results Management System</strong></div><div className="userbar"><span className="avatar" aria-hidden="true">{initials}</span><span className="user-meta"><strong>{displayName}</strong><small>{profile.role}</small><StatusBadge value={profile.account_status} /></span></div></header>
+      <header className="topbar"><div className="mobile-brand"><MustBrand subtitle="Examination Services" /></div><div className="topbar-title"><span className="crumb">MUST / {profile.role} workspace</span><strong>Examination Results Management System</strong></div><div className="userbar"><span className="avatar" aria-hidden="true">{initials}</span><Link className="user-meta" href="/profile" aria-label="Open my profile"><strong>{displayName}</strong><small>{profile.role}</small><StatusBadge value={profile.account_status} /></Link></div></header>
       <div className="mobile-nav"><details><summary>Workspace menu</summary><nav aria-label="Mobile workspace navigation"><WorkspaceLinks profile={profile} /></nav></details></div>
       {children}
       <PortalFooter />
