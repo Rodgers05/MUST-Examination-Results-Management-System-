@@ -40,7 +40,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
     <div className="grid">
       <Card title="Personal profile" note="Your role and account status are controlled by the examinations administrator.">
         <div className="profile-identity">
-          {avatarUrl ? <img className="profile-photo" src={avatarUrl} alt="Your profile" /> : <div className="profile-photo profile-initials" aria-hidden="true">{profile.full_name.split(/\\s+/).map((part) => part[0]).slice(0,2).join('').toUpperCase()}</div>}
+          {avatarUrl ? <img className="profile-photo" src={avatarUrl} alt="Your profile" /> : <div className="profile-photo profile-initials" aria-hidden="true">{profile.full_name.split(/\s+/).map((part) => part[0]).slice(0,2).join('').toUpperCase()}</div>}
           <div><strong>{profile.full_name}</strong><p>{profile.institutional_email}</p><StatusBadge value={profile.account_status} /></div>
         </div>
         <form action={uploadProfileAvatar} className="avatar-upload">
