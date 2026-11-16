@@ -8,7 +8,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
     <><PortalHeader nav /><main className="auth-wrap">
       <section className="auth-art"><div className="auth-brand-note">MUST EXAMINATION SERVICES</div><div><div className="kicker">SECURE ACADEMIC WORKSPACE</div><h1>One trusted record for every result.</h1><p>Role-based access supports teaching staff, reviewers, the registrar and students.</p></div><a href="https://www.must.ac.ug/" target="_blank" rel="noreferrer">Visit MUST website ↗</a></section>
       <section className="auth-card-wrap"><div className="auth-card">
-        <div className="kicker">WELCOME BACK</div><h1>Sign in</h1><p className="muted">Use the email address registered with your account.</p>
+        <div className="kicker">WELCOME BACK</div><h1>Sign in</h1><p className="muted">Sign in with your MUST institutional email address. Personal email accounts are not permitted.</p>
         {notice && <div className="notice">{notice}</div>}
         <form action={login}>
           <input type="hidden" name="next" value={next || '/dashboard'} />
@@ -17,7 +17,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <button type="submit">Sign in securely</button>
         </form>
         <div className="auth-divider"><span>OR</span></div>
-        <form action={googleSignIn}><button type="submit" className="secondary">Continue with Google</button></form>
+        <form action={googleSignIn}><button type="submit" className="secondary">Continue with Google (MUST accounts only)</button></form>
         <p className="auth-foot">New student? <Link href="/register">Create an account</Link>. New accounts require email verification and administrator approval. <a href="https://www.must.ac.ug/" target="_blank" rel="noreferrer">MUST website</a>.</p>
       </div></section>
     </main><PortalFooter /></>
