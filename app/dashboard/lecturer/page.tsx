@@ -18,24 +18,34 @@ export default async function LecturerMarksPage({ searchParams }: { searchParams
     offeringIds.length ? supabase.from('course_offerings').select('id,course_id,semester_id,group_name').in('id', offeringIds) : Promise.resolve({ data: [], error: null }),
     offeringIds.length ? supabase.from('assessments').select('id,offering_id,title,assessment_type,maximum_mark,weight').in('offering_id', offeringIds) : Promise.resolve({ data: [], error: null }),
     offeringIds.length ? supabase.from('enrollments').select('id,offering_id,student_id,enrollment_status').in('offering_id', offeringIds).eq('enrollment_status', 'ENROLLED') : Promise.resolve({ data: [], error: null }),
-    offeringIds.length ? supabase.from('result_submissions').select('id,offering_id,status,reviewer_note,lecturer_note').in('offering_id', offeringIds) : Promise.resolve({ data: [], error: null }),\n    offeringIds.length ? supabase.from('attendance_sessions').select('id,offering_id,session_date,session_title').in('offering_id', offeringIds).order('session_date', { ascending: false }) : Promise.resolve({ data: [], error: null }),
+    offeringIds.length ? supabase.from('result_submissions').select('id,offering_id,status,reviewer_note,lecturer_note').in('offering_id', offeringIds) : Promise.resolve({ data: [], error: null }),
+    offeringIds.length ? supabase.from('attendance_sessions').select('id,offering_id,session_date,session_title').in('offering_id', offeringIds).order('session_date', { ascending: false }) : Promise.resolve({ data: [], error: null }),
   ])
   const offerings = rows(offeringResult.data)
   const assessments = rows(assessmentResult.data)
   const enrollments = rows(enrollmentResult.data)
-  const submissions = rows(submissionResult.data)\n  const attendanceSessions = rows(attendanceSessionResult.data)\n  const attendanceSessionIds = attendanceSessions.map(id)\n  const attendanceRecordResult = attendanceSessionIds.length\n    ? await supabase.from('attendance_records').select('session_id,student_id,attendance_status').in('session_id', attendanceSessionIds)\n    : { data: [], error: null }\n  const attendanceRecords = rows(attendanceRecordResult.data)
-  const coursesResult = offerings.length
-    ? await supabase.from('courses').select('id,code,title,department_id').in('id', offerings.map((item) => value(item, 'course_id')))
-    : { data: [], error: null }
-  const semestersResult = offerings.length
-    ? await supabase.from('semesters').select('id,name,academic_year_id').in('id', offerings.map((item) => value(item, 'semester_id')))
-    : { data: [], error: null }
+  const submissions = rows(submissionResult.data)
+  const attendanceSessions = rows(attendanceSessionResult.data)
+  const attendanceSessionIds = attendanceSessions.map(id)
+  const assessmentIds = assessments.map(id)
+  // These independent reads run concurrently to reduce the lecturer workspace's critical path.
+  const [coursesResult, semestersResult, marksResult, attendanceRecordResult] = await Promise.all([
+    offerings.length
+      ? supabase.from('courses').select('id,code,title,department_id').in('id', offerings.map((item) => value(item, 'course_id')))
+      : Promise.resolve({ data: [], error: null }),
+    offerings.length
+      ? supabase.from('semesters').select('id,name,academic_year_id').in('id', offerings.map((item) => value(item, 'semester_id')))
+      : Promise.resolve({ data: [], error: null }),
+    assessmentIds.length
+      ? supabase.from('marks').select('assessment_id,student_id,mark').in('assessment_id', assessmentIds)
+      : Promise.resolve({ data: [], error: null }),
+    attendanceSessionIds.length
+      ? supabase.from('attendance_records').select('session_id,student_id,attendance_status').in('session_id', attendanceSessionIds)
+      : Promise.resolve({ data: [], error: null }),
+  ])
+  const attendanceRecords = rows(attendanceRecordResult.data)
   const courseMap = new Map(rows(coursesResult.data).map((item) => [id(item), item]))
   const semesterMap = new Map(rows(semestersResult.data).map((item) => [id(item), item]))
-  const assessmentIds = assessments.map(id)
-  const marksResult = assessmentIds.length
-    ? await supabase.from('marks').select('assessment_id,student_id,mark').in('assessment_id', assessmentIds)
-    : { data: [], error: null }
   const marks = rows(marksResult.data)
   const hasError = Boolean(assignmentError || offeringResult.error || assessmentResult.error || enrollmentResult.error || submissionResult.error || attendanceSessionResult.error || attendanceRecordResult.error || coursesResult.error || semestersResult.error || marksResult.error)
   const offeringLabel = (offering: Row) => {
