@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import { requireActiveProfile } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { DashboardFrame, Card, Empty, StatusBadge } from '@/app/components/portal-ui'
@@ -20,7 +21,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
       : Promise.resolve({ data: [], error: null }),
   ])
   const resultRows = resultsResult.data ?? []
-  const offeringIds = [...new Set((assignmentsResult.data ?? []).map((row) => row.offering_id))]
+  const offeringIds = [...new Set([...(assignmentsResult.data ?? []).map((row) => row.offering_id), ...resultRows.map((row) => row.offering_id)])]
   const offeringsResult = offeringIds.length
     ? await supabase.from('course_offerings').select('id,course_id,semester_id,group_name').in('id', offeringIds)
     : { data: [], error: null }
@@ -40,7 +41,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
     <div className="grid">
       <Card title="Personal profile" note="Your role and account status are controlled by the examinations administrator.">
         <div className="profile-identity">
-          {avatarUrl ? <img className="profile-photo" src={avatarUrl} alt="Your profile" /> : <div className="profile-photo profile-initials" aria-hidden="true">{profile.full_name.split(/\s+/).map((part) => part[0]).slice(0,2).join('').toUpperCase()}</div>}
+          {avatarUrl ? <Image className="profile-photo" src={avatarUrl} alt="Your profile" width={88} height={88} unoptimized /> : <div className="profile-photo profile-initials" aria-hidden="true">{profile.full_name.split(/\s+/).map((part) => part[0]).slice(0,2).join('').toUpperCase()}</div>}
           <div><strong>{profile.full_name}</strong><p>{profile.institutional_email}</p><StatusBadge value={profile.account_status} /></div>
         </div>
         <form action={uploadProfileAvatar} className="avatar-upload">
@@ -64,7 +65,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
         </form>
       </Card>
       {profile.role === 'STUDENT' && <Card title="Published academic results" note="Only results formally published for your account are shown here.">
-        {resultsResult.error ? <Empty>Published results could not be loaded. Refresh and try again.</Empty> : resultRows.length === 0 ? <Empty>No published results are available for your account.</Empty> : <div className="table-wrap"><table><thead><tr><th>Course offering</th><th>Coursework</th><th>Examination</th><th>Total</th><th>Grade</th><th>Published</th></tr></thead><tbody>{resultRows.map((row) => <tr key={row.id}><td>{row.offering_id}</td><td>{row.coursework_mark ?? '—'}</td><td>{row.exam_mark ?? '—'}</td><td>{row.total_mark ?? '—'}</td><td>{row.grade ?? '—'}</td><td>{row.published_at ? new Date(row.published_at).toLocaleDateString() : '—'}</td></tr>)}</tbody></table></div>}
+        {resultsResult.error ? <Empty>Published results could not be loaded. Refresh and try again.</Empty> : resultRows.length === 0 ? <Empty>No published results are available for your account.</Empty> : <div className="table-wrap"><table><thead><tr><th>Course offering</th><th>Coursework</th><th>Examination</th><th>Total</th><th>Grade</th><th>Published</th></tr></thead><tbody>{resultRows.map((row) => { const offering = offeringById.get(row.offering_id); const course = offering ? courseById.get(offering.course_id) : null; return <tr key={row.id}><td>{course ? course.code + ' · ' + course.title : row.offering_id}</td><td>{row.coursework_mark ?? '—'}</td><td>{row.exam_mark ?? '—'}</td><td>{row.total_mark ?? '—'}</td><td>{row.grade ?? '—'}</td><td>{row.published_at ? new Date(row.published_at).toLocaleDateString() : '—'}</td></tr> })}</tbody></table></div>}
       </Card>}
       {['LECTURER', 'REVIEWER', 'REGISTRAR'].includes(profile.role) && <Card title="Academic assignments" note="Course assignments currently associated with your staff profile.">
         {assignmentsResult.error || offeringsResult.error || coursesResult.error ? <Empty>Assignments could not be loaded.</Empty> : (assignmentsResult.data ?? []).length === 0 ? <Empty>No course assignments are currently associated with your account.</Empty> : <div className="table-wrap"><table><thead><tr><th>Course</th><th>Assignment role</th><th>Offering</th></tr></thead><tbody>{(assignmentsResult.data ?? []).map((assignment, index) => { const offering = offeringById.get(assignment.offering_id); const course = offering ? courseById.get(offering.course_id) : null; return <tr key={assignment.offering_id + assignment.assignment_role + index}><td>{course ? course.code + ' · ' + course.title : 'Course details unavailable'}</td><td>{assignment.assignment_role}</td><td>{offering?.group_name ?? '—'}</td></tr> })}</tbody></table></div>}
