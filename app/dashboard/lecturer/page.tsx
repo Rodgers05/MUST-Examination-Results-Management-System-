@@ -1,7 +1,7 @@
 import { requireActiveProfile } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { Card, DashboardFrame, DataTable, Empty, StatusBadge } from '@/app/components/portal-ui'
-import { createAssessment, saveBatchMarks, submitResults, resubmitResults } from '../actions'
+import { createAssessment, recordAttendanceSession, saveBatchMarks, submitResults, resubmitResults } from '../actions'
 
 type Row = Record<string, unknown>
 const rows = (value: unknown): Row[] => Array.isArray(value) ? value as Row[] : []
@@ -14,16 +14,16 @@ export default async function LecturerMarksPage({ searchParams }: { searchParams
   const { data: assignments, error: assignmentError } = await supabase
     .from('course_staff').select('offering_id').eq('user_id', profile.id).eq('assignment_role', 'LECTURER')
   const offeringIds = [...new Set((assignments ?? []).map((item) => item.offering_id))]
-  const [offeringResult, assessmentResult, enrollmentResult, submissionResult] = await Promise.all([
+  const [offeringResult, assessmentResult, enrollmentResult, submissionResult, attendanceSessionResult] = await Promise.all([
     offeringIds.length ? supabase.from('course_offerings').select('id,course_id,semester_id,group_name').in('id', offeringIds) : Promise.resolve({ data: [], error: null }),
     offeringIds.length ? supabase.from('assessments').select('id,offering_id,title,assessment_type,maximum_mark,weight').in('offering_id', offeringIds) : Promise.resolve({ data: [], error: null }),
     offeringIds.length ? supabase.from('enrollments').select('id,offering_id,student_id,enrollment_status').in('offering_id', offeringIds).eq('enrollment_status', 'ENROLLED') : Promise.resolve({ data: [], error: null }),
-    offeringIds.length ? supabase.from('result_submissions').select('id,offering_id,status,reviewer_note,lecturer_note').in('offering_id', offeringIds) : Promise.resolve({ data: [], error: null }),
+    offeringIds.length ? supabase.from('result_submissions').select('id,offering_id,status,reviewer_note,lecturer_note').in('offering_id', offeringIds) : Promise.resolve({ data: [], error: null }),\n    offeringIds.length ? supabase.from('attendance_sessions').select('id,offering_id,session_date,session_title').in('offering_id', offeringIds).order('session_date', { ascending: false }) : Promise.resolve({ data: [], error: null }),
   ])
   const offerings = rows(offeringResult.data)
   const assessments = rows(assessmentResult.data)
   const enrollments = rows(enrollmentResult.data)
-  const submissions = rows(submissionResult.data)
+  const submissions = rows(submissionResult.data)\n  const attendanceSessions = rows(attendanceSessionResult.data)\n  const attendanceSessionIds = attendanceSessions.map(id)\n  const attendanceRecordResult = attendanceSessionIds.length\n    ? await supabase.from('attendance_records').select('session_id,student_id,attendance_status').in('session_id', attendanceSessionIds)\n    : { data: [], error: null }\n  const attendanceRecords = rows(attendanceRecordResult.data)
   const coursesResult = offerings.length
     ? await supabase.from('courses').select('id,code,title,department_id').in('id', offerings.map((item) => value(item, 'course_id')))
     : { data: [], error: null }
@@ -37,7 +37,7 @@ export default async function LecturerMarksPage({ searchParams }: { searchParams
     ? await supabase.from('marks').select('assessment_id,student_id,mark').in('assessment_id', assessmentIds)
     : { data: [], error: null }
   const marks = rows(marksResult.data)
-  const hasError = Boolean(assignmentError || offeringResult.error || assessmentResult.error || enrollmentResult.error || submissionResult.error || coursesResult.error || semestersResult.error || marksResult.error)
+  const hasError = Boolean(assignmentError || offeringResult.error || assessmentResult.error || enrollmentResult.error || submissionResult.error || attendanceSessionResult.error || attendanceRecordResult.error || coursesResult.error || semestersResult.error || marksResult.error)
   const offeringLabel = (offering: Row) => {
     const course = courseMap.get(value(offering, 'course_id'))
     const semester = semesterMap.get(value(offering, 'semester_id'))
@@ -76,6 +76,42 @@ export default async function LecturerMarksPage({ searchParams }: { searchParams
             <p className="subtle">Coursework: {courseworkWeight}% / 40% maximum · Examination: {examWeight}% / 60% maximum · Total configured: {totalWeight}%</p>
             {submission && <p><StatusBadge value={value(submission, 'status')} /></p>}
             {submission && value(submission, 'status') === 'RETURNED' && <div className="notice error"><strong>Reviewer feedback:</strong> {value(submission, 'reviewer_note') || 'Review the returned marks and correct them.'}</div>}
+            <section className="card" style={{marginTop:18}}>
+              <h3>Attendance register and examination eligibility</h3>
+              <p className="subtle">Record every scheduled session for every enrolled student. Students need at least 80% attendance to be examination-eligible. Registers become locked after results submission.</p>
+              {students.length > 0 ? <form action={recordAttendanceSession} className="form-grid">
+                <input type="hidden" name="offering_id" value={offeringId} />
+                <div className="field"><label>Session date</label><input type="date" name="session_date" required /></div>
+                <div className="field"><label>Session title / topic</label><input name="session_title" minLength={2} maxLength={160} required placeholder="e.g. Lecture 3 — Data structures" /></div>
+                <DataTable headings={['Student ID','Attendance status']}>
+                  {students.map((student) => <tr key={value(student, 'student_id')}>
+                    <td><code>{value(student, 'student_id')}</code></td>
+                    <td><select name={'attendance-' + value(student, 'student_id')} defaultValue="" required><option value="" disabled>Select status</option><option value="PRESENT">Present</option><option value="ABSENT">Absent</option></select></td>
+                  </tr>)}
+                </DataTable>
+                <button type="submit">Save complete attendance register</button>
+              </form> : <Empty>Enrol students before recording attendance.</Empty>}
+              {(() => {
+                const courseSessions = attendanceSessions.filter((session) => value(session, 'offering_id') === offeringId)
+                const courseRecords = attendanceRecords.filter((record) => courseSessions.some((session) => id(session) === value(record, 'session_id')))
+                return courseSessions.length ? <>
+                  <h4>Recorded sessions ({courseSessions.length})</h4>
+                  <DataTable headings={['Date','Session / topic']}>
+                    {courseSessions.map((session) => <tr key={id(session)}><td>{value(session, 'session_date')}</td><td>{value(session, 'session_title')}</td></tr>)}
+                  </DataTable>
+                  <h4>Attendance summary</h4>
+                  <DataTable headings={['Student ID','Present','Sessions recorded','Attendance','Exam eligibility']}>
+                    {students.map((student) => {
+                      const own = courseRecords.filter((record) => value(record, 'student_id') === value(student, 'student_id'))
+                      const present = own.filter((record) => value(record, 'attendance_status') === 'PRESENT').length
+                      const complete = own.length === courseSessions.length
+                      const percentage = courseSessions.length ? Math.round((present / courseSessions.length) * 10000) / 100 : 0
+                      return <tr key={value(student, 'student_id')}><td><code>{value(student, 'student_id')}</code></td><td>{present}</td><td>{own.length}/{courseSessions.length}</td><td>{complete ? percentage + '%' : 'Incomplete'}</td><td><StatusBadge value={!complete ? 'IN_PROGRESS' : percentage >= 80 ? 'ELIGIBLE' : 'INELIGIBLE'} /></td></tr>
+                    })}
+                  </DataTable>
+                </> : <Empty>No attendance sessions have been recorded for this offering.</Empty>
+              })()}
+            </section>
             {!courseAssessments.length || !students.length ? <Empty>Add assessments and enrollments before entering marks.</Empty> : <form action={saveBatchMarks}>
               <input type="hidden" name="offering_id" value={offeringId} />
               <DataTable headings={['Student ID', ...courseAssessments.map((item) => value(item, 'title') + ' (' + value(item, 'maximum_mark') + ')')]}>
