@@ -138,6 +138,8 @@ test('server contract uses verified claims, role gates, email verification and G
   assert.match(authActions, /email_provider_disabled/)
   assert.match(authActions, /email_confirmed_at/)
   assert.match(authActions, /isMustInstitutionalEmail\(email\)/)
+  assert.match(authActions, /isCompromisedPassword\(password\)/)
+  assert.match(authActions, /This password appears in known data breaches/)
   assert.match(auth, /isMustInstitutionalEmail\(data\.institutional_email\)/)
   assert.match(callback, /isMustInstitutionalEmail\(user\.email\)/)
   assert.match(authActions, /signInWithOAuth\([\s\S]*provider: 'google'/)
