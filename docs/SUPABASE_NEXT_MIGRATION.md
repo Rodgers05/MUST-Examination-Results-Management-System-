@@ -108,3 +108,12 @@ The dependency-free tests cover MUST email domains, safe authentication redirect
 Dependency installation was attempted but could not access `registry.npmjs.org` (`EACCES`). The existing `package-lock.json` therefore does not yet include the Next.js, React or Supabase dependencies. Lint, TypeScript checking and the production build could not run because their executables are not installed. Run `npm install` when registry access is available, then regenerate the lockfile and rerun all three checks.
 
 Live Supabase RLS/workflow tests still need dedicated non-production users and fixtures. Read-only catalog checks confirmed the role column restriction is in effect and the workflow RPC signatures are present. Review the remaining `supabase_admin` default privileges for future public objects, and decide how non-workflow catalogue/assessment/mark changes should be recorded in the audit trail before production acceptance.
+
+### Additional feature-branch migrations — not yet applied to production
+
+The following migrations were added after the current production database audit. Keep them unapplied until the feature branch passes CI and its preview deployment is verified:
+
+- `20261116170000_attendance_register_and_exam_eligibility.sql`: creates RLS-protected attendance sessions and registers, allows assigned lecturers/admins to submit a complete roll call atomically, and enforces complete registers plus at least 80% attendance at the database result-submission boundary. Attendance writes are performed through the authorised RPC; students can read only their own attendance records.
+- `20261116171000_admin_support_ticket_workflow.sql`: adds an administrator-only support-ticket status RPC with audit logging. The dashboard exposes OPEN, IN_PROGRESS, RESOLVED and CLOSED transitions to administrators only.
+
+Apply these migrations in timestamp order after preview verification. Do not seed attendance, programmes, faculties, course units, assessments, enrolments, marks or grades with invented values. Import the approved academic catalogue and real attendance registers through authorised workflows.
