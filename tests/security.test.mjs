@@ -252,5 +252,5 @@ test('shared MUST presentation keeps role navigation, mobile navigation and work
   assert.match(styles, /@media\(max-width:480px\)/)
   assert.match(styles, /@media\(max-width:360px\)/)
   assert.match(styles, /overflow-x:auto/)
-  assert.match(styles, /prefers-reduced-motion:reduce/)
+  assert.match(styles, /prefers-reduced-motion:reduce/)\n  assert.doesNotMatch(styles, /\\n\\s*$/)
 })
