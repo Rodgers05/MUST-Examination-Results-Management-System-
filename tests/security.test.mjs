@@ -254,3 +254,22 @@ test('shared MUST presentation keeps role navigation, mobile navigation and work
   assert.match(styles, /overflow-x:auto/)
   assert.match(styles, /prefers-reduced-motion:reduce/)\n  assert.doesNotMatch(styles, /\\n\\s*$/)
 })
+
+test('attendance register is access-controlled and blocks result submission below 80 percent', async () => {
+  const [actions, lecturer, migration] = await Promise.all([
+    readFile(new URL('../app/dashboard/actions.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../app/dashboard/lecturer/page.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../supabase/migrations/20261116170000_attendance_register_and_exam_eligibility.sql', import.meta.url), 'utf8'),
+  ])
+  assert.match(actions, /record_attendance_session/)
+  assert.match(actions, /attendance_sessions/)
+  assert.match(actions, /attendance_records/)
+  assert.match(actions, /present \/ sessions\.length\) \* 100 < 80/)
+  assert.match(lecturer, /Save complete attendance register/)
+  assert.match(lecturer, /80% attendance/)
+  assert.match(migration, /enable row level security/i)
+  assert.match(migration, /revoke insert, update, delete/i)
+  assert.match(migration, /result_submission_attendance_eligibility/)
+  assert.match(migration, /at least 80 percent attendance/i)
+  assert.match(migration, /private\.is_assigned/)
+})
