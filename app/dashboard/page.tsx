@@ -215,26 +215,25 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               </Table> : <Empty>No live course offerings are configured. Once the approved academic catalogue is entered, course offerings will appear here.</Empty>}
             </Card>
 
+            <Card id="faculty-course-directory" title="Faculty course directory" note="Current MUST-VLE undergraduate listings are visible across all faculties. Course codes, credit units and study levels not published in the VLE remain pending Registrar verification; unverified entries cannot yet be used to create new result-processing offerings.">
+              {courses.length ? <Table headings={['Faculty','Course code','Course unit','Credit units','Study level','Source','Catalogue status']}>
+                {courses.map((course) => {
+                  const faculty = departments.find((item) => uid(item) === text(course, 'department_id'))
+                  return <tr key={uid(course)}>
+                    <td>{text(faculty ?? {}, 'name') || 'Faculty not assigned'}</td>
+                    <td>{text(course, 'code') || 'Pending verification'}</td>
+                    <td>{text(course, 'title')}</td>
+                    <td>{text(course, 'credit_units') || 'Pending'}</td>
+                    <td>{text(course, 'level') || 'Pending'}</td>
+                    <td>{text(course, 'catalogue_source') || 'Existing catalogue record'}</td>
+                    <td>{status(text(course, 'catalogue_status') || 'PENDING_VERIFICATION')}</td>
+                  </tr>
+                })}
+              </Table> : <Empty>No course units are registered yet.</Empty>}
+            </Card>
+
             {isAdmin && <Card id="catalogue-admin" title="Academic catalogue administration" note="Enter approved MUST academic records. These records power course offerings, staff assignments, enrolments and results processing.">
               <div className="grid">
-                <div className="card">
-                  <h3>Registered course units by faculty</h3>
-                  <p className="subtle">Current undergraduate teaching listings are shown here. Missing course codes, credit units and study levels remain pending Registrar verification and are not offered for new course-offering assignment yet.</p>
-                  {courses.length ? <Table headings={['Faculty','Course code','Course unit','Credit units','Study level','Source','Catalogue status']}>
-                    {courses.map((course) => {
-                      const faculty = departments.find((item) => uid(item) === text(course, 'department_id'))
-                      return <tr key={uid(course)}>
-                        <td>{text(faculty ?? {}, 'name') || 'Faculty not assigned'}</td>
-                        <td>{text(course, 'code') || 'Pending verification'}</td>
-                        <td>{text(course, 'title')}</td>
-                        <td>{text(course, 'credit_units') || 'Pending'}</td>
-                        <td>{text(course, 'level') || 'Pending'}</td>
-                        <td>{text(course, 'catalogue_source') || 'Existing catalogue record'}</td>
-                        <td>{status(text(course, 'catalogue_status') || 'PENDING_VERIFICATION')}</td>
-                      </tr>
-                    })}
-                  </Table> : <Empty>No course units are registered yet.</Empty>}
-                </div>
                 <form action={createCatalogueRecord} className="card half"><input type="hidden" name="kind" value="department" /><h3>Department</h3><div className="field"><label>Code</label><input name="code" required maxLength={20} /></div><div className="field"><label>Name</label><input name="name" required maxLength={120} /></div><button>Save department</button></form>
                 <form action={createCatalogueRecord} className="card half"><input type="hidden" name="kind" value="academic_year" /><h3>Academic year</h3><div className="field"><label>Label</label><input name="label" placeholder="YYYY/YYYY" required /></div><div className="form-grid"><div className="field"><label>Starts</label><input type="date" name="starts_on" required /></div><div className="field"><label>Ends</label><input type="date" name="ends_on" required /></div></div><button>Save year</button></form>
                 <form action={createCatalogueRecord} className="card half"><input type="hidden" name="kind" value="semester" /><h3>Semester</h3><div className="field"><label>Academic year</label><select name="academic_year_id" required><option value="">Choose year</option><IdOptions items={years} label={(item) => text(item, 'label')} /></select></div><div className="form-grid"><div className="field"><label>Name</label><select name="name"><option>SEMESTER 1</option><option>SEMESTER 2</option><option>RECESS</option></select></div><div className="field"><label>Status</label><select name="status"><option>PLANNED</option><option>OPEN</option><option>CLOSED</option></select></div></div><div className="form-grid"><div className="field"><label>Starts</label><input type="date" name="starts_on" required /></div><div className="field"><label>Ends</label><input type="date" name="ends_on" required /></div></div><button>Save semester</button></form>
