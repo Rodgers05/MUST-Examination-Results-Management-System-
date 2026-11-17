@@ -260,7 +260,7 @@ test('attendance register is access-controlled and blocks result submission belo
   const [actions, lecturer, migration] = await Promise.all([
     readFile(new URL('../app/dashboard/actions.ts', import.meta.url), 'utf8'),
     readFile(new URL('../app/dashboard/lecturer/page.tsx', import.meta.url), 'utf8'),
-    readFile(new URL('../supabase/migrations/20261116170000_attendance_register_and_exam_eligibility.sql', import.meta.url), 'utf8'),
+    readFile(new URL('../supabase/migrations/20261117142522_attendance_register_and_exam_eligibility.sql', import.meta.url), 'utf8'),
   ])
   assert.match(actions, /record_attendance_session/)
   assert.match(actions, /attendance_sessions/)
@@ -279,7 +279,7 @@ test('support tickets can be triaged only through the audited administrator RPC'
   const [actions, dashboard, migration] = await Promise.all([
     readFile(new URL('../app/dashboard/actions.ts', import.meta.url), 'utf8'),
     readFile(new URL('../app/dashboard/page.tsx', import.meta.url), 'utf8'),
-    readFile(new URL('../supabase/migrations/20261116171000_admin_support_ticket_workflow.sql', import.meta.url), 'utf8'),
+    readFile(new URL('../supabase/migrations/20261117142532_admin_support_ticket_workflow.sql', import.meta.url), 'utf8'),
   ])
   assert.match(actions, /actor\(\['ADMIN'\]\)/)
   assert.match(actions, /admin_update_support_ticket/)
