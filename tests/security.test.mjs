@@ -118,7 +118,7 @@ test('batch mark validation enforces maximums, enrolment and unique student-asse
 })
 
 test('server contract uses verified claims, role gates, email verification and Google OAuth', async () => {
-  const [authActions, auth, proxy, actions, dashboard, browserClient, loginPage, registerPage, callback, profilePage, passwordField, passwordActions, nextConfig] = await Promise.all([
+  const [authActions, auth, proxy, actions, dashboard, browserClient, loginPage, registerPage, callback, profilePage, passwordField, passwordActions, nextConfig, styles] = await Promise.all([
     readFile(new URL('../app/auth-actions.ts', import.meta.url), 'utf8'),
     readFile(new URL('../lib/auth.ts', import.meta.url), 'utf8'),
     readFile(new URL('../proxy.ts', import.meta.url), 'utf8'),
@@ -132,6 +132,7 @@ test('server contract uses verified claims, role gates, email verification and G
     readFile(new URL('../app/components/password-field.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../app/auth/password-actions.ts', import.meta.url), 'utf8'),
     readFile(new URL('../next.config.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../app/globals.css', import.meta.url), 'utf8'),
   ])
   assert.match(auth, /auth\.getClaims\(\)/)
   assert.match(proxy, /auth\.getClaims\(\)/)
