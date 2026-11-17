@@ -22,7 +22,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
           <div className="field"><label htmlFor="resend_email">Resend confirmation email</label><input id="resend_email" name="email" type="email" autoComplete="email" placeholder="Enter your registered email" required /></div>
           <button type="submit" className="secondary-button">Resend confirmation email</button>
         </form>
-        <p className="auth-foot">Already verified? <Link href="/login">Sign in</Link>. Accounts require administrator approval.</p>
+        <p className="auth-foot">MUST email accounts are automatically verified. Non-MUST email accounts remain pending until an administrator verifies the address and approves access. <Link href="/login">Sign in</Link>.</p>
       </div></section>
     </main><PortalFooter /></>
   )
