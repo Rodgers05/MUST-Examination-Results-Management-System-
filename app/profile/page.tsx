@@ -60,7 +60,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
     : null
 
   return <DashboardFrame profile={profile}><main className="content">
-    <div className="welcome"><div><div className="kicker">ACCOUNT SETTINGS</div><h1>My profile</h1><p>Manage your personal details, profile photo and appearance.</p></div><span className="tag">{profile.role}</span></div>
+    <div className="welcome"><div><div className="kicker">ACCOUNT SETTINGS</div><h1>My profile</h1><p>Manage your personal details, profile photo and appearance.</p></div><div className="welcome-actions"><span className="tag">{profile.role}</span><form action="/auth/logout" method="post"><button type="submit" className="danger profile-signout">Sign out</button></form></div></div>
     {notice && <div className="notice" role="status">{notice}</div>}
     <div className="grid">
       <Card title="Personal profile" note="Your role and account status are controlled by the examinations administrator.">
