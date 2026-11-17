@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { login, googleSignIn } from '@/app/auth-actions'
 import { PortalFooter, PortalHeader } from '@/app/components/portal-ui'
+import { PasswordInput } from '@/app/components/password-input'
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ notice?: string; next?: string }> }) {
   const { notice, next } = await searchParams
@@ -13,8 +14,9 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <form action={login}>
           <input type="hidden" name="next" value={next || '/dashboard'} />
           <div className="field"><label htmlFor="email">Email address</label><input id="email" name="email" type="email" autoComplete="username" required /></div>
-          <div className="field"><label htmlFor="password">Password</label><input id="password" name="password" type="password" autoComplete="current-password" required /></div>
+          <div className="field"><label htmlFor="password">Password</label><PasswordInput id="password" name="password" autoComplete="current-password" required /></div>
           <button type="submit">Sign in securely</button>
+        <p className="auth-foot auth-recovery-link"><Link href="/forgot-password">Forgot your password?</Link></p>
         </form>
         <div className="auth-divider"><span>OR</span></div>
         <form action={googleSignIn}><button type="submit" className="secondary">Continue with Google</button></form>

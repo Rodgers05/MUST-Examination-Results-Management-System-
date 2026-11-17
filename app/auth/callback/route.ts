@@ -13,19 +13,27 @@ export async function GET(request: NextRequest) {
     if (!exchangeError) {
       const { data: { user }, error: userError } = await supabase.auth.getUser()
 
-      if (!userError && user?.email_confirmed_at) {
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('account_status')
-          .eq('id', user.id)
-          .maybeSingle()
-
-        if (!profileError && profile?.account_status === 'PENDING') {
-          return NextResponse.redirect(new URL('/pending', request.url))
+      if (!userError && user) {
+        // Recovery links establish a temporary authenticated session. Let the
+        // owner update their password even if the profile is not active yet.
+        if (destination === '/reset-password') {
+          return NextResponse.redirect(new URL('/reset-password', request.url))
         }
 
-        if (!profileError && profile?.account_status === 'ACTIVE') {
-          return NextResponse.redirect(new URL(destination, request.url))
+        if (user.email_confirmed_at) {
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('account_status')
+            .eq('id', user.id)
+            .maybeSingle()
+
+          if (!profileError && profile?.account_status === 'PENDING') {
+            return NextResponse.redirect(new URL('/pending', request.url))
+          }
+
+          if (!profileError && profile?.account_status === 'ACTIVE') {
+            return NextResponse.redirect(new URL(destination, request.url))
+          }
         }
       }
 
