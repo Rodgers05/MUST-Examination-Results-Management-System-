@@ -35,9 +35,12 @@ export function PwaInstallPrompt() {
       ? 'To install, open this page in Safari, tap Share, then choose “Add to Home Screen”.'
       : 'Add this portal to your home screen from your browser menu, or install it when your browser offers the install option.'
 
+    let initialPromptFrame: number | null = null
     if (!dismissed) {
-      setMessage(manualInstructions)
-      setVisible(true)
+      initialPromptFrame = window.requestAnimationFrame(() => {
+        setMessage(manualInstructions)
+        setVisible(true)
+      })
     }
 
     const onBeforeInstall = (event: Event) => {
@@ -58,6 +61,7 @@ export function PwaInstallPrompt() {
     window.addEventListener('beforeinstallprompt', onBeforeInstall)
     window.addEventListener('appinstalled', onInstalled)
     return () => {
+      if (initialPromptFrame !== null) window.cancelAnimationFrame(initialPromptFrame)
       window.removeEventListener('beforeinstallprompt', onBeforeInstall)
       window.removeEventListener('appinstalled', onInstalled)
     }
