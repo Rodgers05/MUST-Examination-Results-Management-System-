@@ -64,11 +64,11 @@ export async function register(formData: FormData) {
   })
   if (error?.code === 'email_provider_disabled') note('/register', 'Email registration is currently disabled. The administrator must enable the Email provider in Supabase Authentication settings.')
   if (error) note('/register', error.code === 'unexpected_failure' ? emailDeliveryFailure(error) : 'We could not create this account. Check your details and try again.')
-  if (data.session) {
-    await supabase.auth.signOut()
-    note('/login', 'Email verification is required. Check your inbox before signing in.')
+  if (verificationMode === 'MUST_AUTO') {
+    if (data.session) redirect('/dashboard')
+    note('/login', 'Your MUST email address is automatically verified. You can now sign in with your password.')
   }
-  note('/login', 'Check your inbox to verify your email. New accounts remain pending until approved.')
+  note('/login', 'Your account request has been received. An administrator must verify your non-MUST email address and approve account access before you can sign in.')
 }
 
 export async function login(formData: FormData) {
