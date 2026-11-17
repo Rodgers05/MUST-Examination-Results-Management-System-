@@ -41,7 +41,8 @@ export async function register(formData: FormData) {
   const password = String(formData.get('password') ?? '')
   if (fullName.length < 2 || fullName.length > 120) note('/register', 'Enter your name (2–120 characters).')
   if (!isValidEmail(email)) note('/register', 'Enter a valid email address.')
-  if (!isMustInstitutionalEmail(email)) note('/register', 'Use your MUST institutional email address ending in @must.ac.ug or @std.must.ac.ug.')
+  const verificationMode = getSignupVerificationMode(email)
+  if (verificationMode === 'INVALID') note('/register', 'Enter a valid email address.')
   if (!isValidPassword(password)) note('/register', 'Use at least 12 characters, including an uppercase letter, a lowercase letter and a number.')
   let compromisedPassword = false
   try {
