@@ -50,7 +50,7 @@ export default async function LecturerMarksPage({ searchParams }: { searchParams
   const attendanceRecords = rows(attendanceRecordResult.data)
   const studentProfileMap = new Map(rows(studentProfilesResult.data).map((item) => [id(item), item]))
   const studentName = (studentId: string) => value(studentProfileMap.get(studentId) ?? {}, 'full_name') || 'Name unavailable'
-  const studentNumber = (studentId: string) => value(studentProfileMap.get(studentId) ?? {}, 'student_number') || 'Registration number unavailable'
+  const studentNumber = (studentId: string) => value(studentProfileMap.get(studentId) ?? {}, 'student_number') || 'Not recorded'
   const courseMap = new Map(rows(coursesResult.data).map((item) => [id(item), item]))
   const semesterMap = new Map(rows(semestersResult.data).map((item) => [id(item), item]))
   const marks = rows(marksResult.data)
@@ -130,6 +130,7 @@ export default async function LecturerMarksPage({ searchParams }: { searchParams
                 </> : <Empty>No attendance sessions have been recorded for this offering.</Empty>
               })()}
             </section>
+            {students.some((student) => !studentNumber(value(student, 'student_id')) || studentNumber(value(student, 'student_id')) === 'Not recorded') && <div className="notice error" role="alert">One or more enrolled students have no registration number recorded in their MUST profile. The system will not invent one; ask the Registrar or administrator to complete the student records before final submission.</div>}
             {!courseAssessments.length || !students.length ? <Empty>Add assessments and enrollments before entering marks.</Empty> : <form action={saveBatchMarks}>
               <input type="hidden" name="offering_id" value={offeringId} />
               <DataTable headings={['Student name','Registration number', ...courseAssessments.map((item) => value(item, 'title') + ' (' + value(item, 'maximum_mark') + ')')]}>
