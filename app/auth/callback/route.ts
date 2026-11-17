@@ -1,5 +1,4 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import type { EmailOtpType } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { safeAppPath } from '@/lib/redirects.mjs'
 
@@ -22,7 +21,7 @@ export async function GET(request: NextRequest) {
   } else if (tokenHash && (otpType === 'email' || otpType === 'signup')) {
     const { error } = await supabase.auth.verifyOtp({
       token_hash: tokenHash,
-      type: otpType as EmailOtpType,
+      type: otpType as 'email' | 'signup',
     })
     verificationFailed = Boolean(error)
   } else {
