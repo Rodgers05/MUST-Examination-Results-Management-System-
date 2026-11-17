@@ -20,7 +20,7 @@ Copy `.env.example` to `.env.local` and configure the project URL and publishabl
 3. Add the Supabase callback URL `https://axqknavghtqeyayglosr.supabase.co/auth/v1/callback` as an authorized redirect URI.
 4. In Supabase **Authentication → Sign In / Providers → Google**, enable Google and enter the Google OAuth client ID and client secret. Keep the client secret in Supabase only; do not add it to browser code or Git.
 5. In Supabase **Authentication → URL Configuration**, set the Site URL to `https://must-exam-results-arineitwerodgers04-8491s-projects.vercel.app` and allow `https://must-exam-results-arineitwerodgers04-8491s-projects.vercel.app/auth/callback` as a redirect URL. Add the matching localhost callback for local development if needed.
-6. Redeploy the app after code changes. The login button invokes Google OAuth directly. The callback rejects non-MUST email addresses even when Google has an existing identity.
+6. Redeploy the app after code changes. The login button invokes Google OAuth directly. The callback accepts any verified email domain; new accounts remain STUDENT / PENDING until an administrator approves them.
 
 ### Email and OAuth operational checks
 
@@ -111,7 +111,7 @@ The legacy demo seed refuses to run when `NODE_ENV=production`. Treat the old My
 
 ## Verification record
 
-The dependency-free tests cover MUST email domains, safe authentication redirects, active-role checks, batch mark boundaries, hardened write-column handling, workflow RPC wiring, student ownership filters, ignore rules and shared responsive UI states. Ten tests passed after the permission-compatibility repair. Offline JavaScript syntax and JSON validation also passed. Loading, route-error, database-query-error and returned-mark correction states have explicit UI handling.
+The dependency-free tests cover valid email-domain acceptance, safe authentication redirects, active-role checks, batch mark boundaries, hardened write-column handling, workflow RPC wiring, student ownership filters, ignore rules and shared responsive UI states. Ten tests passed after the permission-compatibility repair. Offline JavaScript syntax and JSON validation also passed. Loading, route-error, database-query-error and returned-mark correction states have explicit UI handling.
 
 Dependency installation was attempted but could not access `registry.npmjs.org` (`EACCES`). The existing `package-lock.json` therefore does not yet include the Next.js, React or Supabase dependencies. Lint, TypeScript checking and the production build could not run because their executables are not installed. Run `npm install` when registry access is available, then regenerate the lockfile and rerun all three checks.
 
