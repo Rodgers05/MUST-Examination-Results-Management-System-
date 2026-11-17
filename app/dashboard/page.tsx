@@ -49,7 +49,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     read(supabase.from('courses').select('id,code,title,credit_units,department_id,level,catalogue_source,catalogue_status').order('code')),
     read(supabase.from('course_offerings').select('id,course_id,semester_id,group_name').order('created_at', { ascending: false })),
     isAdmin
-      ? read(supabase.from('profiles').select('id,institutional_email,full_name,student_number,staff_number,department_id,role,account_status').order('full_name'))
+      ? read(supabase.from('profiles').select('id,institutional_email,full_name,student_number,staff_number,department_id,role,account_status,email_verified').order('full_name'))
       : Promise.resolve({ rows: [] as Row[], error: null }),
   ])
   // Keep clearly marked seed/demo catalogue rows out of the live workspace.
@@ -244,8 +244,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               </div>
             </Card>}
 
-            {isAdmin && <Card id="access" title="Account access administration" note="New users always arrive as pending students. Use this panel only after verifying a person's institutional status.">
-              {profiles.length ? <Table headings={['User', 'Current access', 'Set access']}>{profiles.map((user) => <tr key={uid(user)}><td>{text(user, 'full_name')}<br /><small>{text(user, 'institutional_email')}</small></td><td><span className="cell-primary">{text(user, 'role')}</span><StatusBadge value={text(user, 'account_status')} /></td><td><form action={setUserAccess} className="form-grid"><input type="hidden" name="user_id" value={uid(user)} /><select aria-label="Role" name="role" defaultValue={text(user, 'role')}>{['STUDENT', 'LECTURER', 'REVIEWER', 'REGISTRAR', 'ADMIN'].map((role) => <option key={role}>{role}</option>)}</select><select aria-label="Status" name="account_status" defaultValue={text(user, 'account_status')}>{['PENDING', 'ACTIVE', 'SUSPENDED'].map((item) => <option key={item}>{item}</option>)}</select><button>Save access</button></form></td></tr>)}</Table> : <Empty>No user profiles yet.</Empty>}
+            {isAdmin && <Card id="access" title="Account access administration" note="MUST-domain signups are automatically email-verified and activated as student accounts. Non-MUST email signups remain pending until an administrator verifies the address and approves access. Role changes remain administrator-controlled.">
+              {profiles.length ? <Table headings={['User', 'Current access', 'Email verification', 'Set access']}>{profiles.map((user) => <tr key={uid(user)}><td>{text(user, 'full_name')}<br /><small>{text(user, 'institutional_email')}</small></td><td><span className="cell-primary">{text(user, 'role')}</span><StatusBadge value={text(user, 'account_status')} /></td><td>{text(user, 'email_verified') === 'true' ? <StatusBadge value="VERIFIED" /> : <StatusBadge value="PENDING" />}<small>{text(user, 'email_verified') === 'true' ? 'Verified' : 'Admin verification required'}</small></td><td><form action={setUserAccess} className="form-grid"><input type="hidden" name="user_id" value={uid(user)} /><select aria-label="Role" name="role" defaultValue={text(user, 'role')}>{['STUDENT', 'LECTURER', 'REVIEWER', 'REGISTRAR', 'ADMIN'].map((role) => <option key={role}>{role}</option>)}</select><select aria-label="Status" name="account_status" defaultValue={text(user, 'account_status')}>{['PENDING', 'ACTIVE', 'SUSPENDED'].map((item) => <option key={item}>{item}</option>)}</select><button>Save access</button></form></td></tr>)}</Table> : <Empty>No user profiles yet.</Empty>}
             </Card>}
 
             {isAdmin && <Card title="Staff assignments and enrolments" note="Review course access and enrolled accounts before lecturers enter marks.">
