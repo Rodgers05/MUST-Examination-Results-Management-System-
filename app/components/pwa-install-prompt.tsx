@@ -7,35 +7,54 @@ type InstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>
 }
 
+const DISMISSED_KEY = 'must-pwa-install-dismissed'
+
 export function PwaInstallPrompt() {
   const [installEvent, setInstallEvent] = useState<InstallPromptEvent | null>(null)
   const [visible, setVisible] = useState(false)
   const [message, setMessage] = useState('')
 
   useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(() => {
-          // The portal remains fully usable if offline support is unavailable.
-        })
-      }, { once: true })
-    }
-
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches
       || (navigator as Navigator & { standalone?: boolean }).standalone === true
     if (isStandalone) return
 
+    let dismissed = false
+    try { dismissed = window.localStorage.getItem(DISMISSED_KEY) === '1' } catch { /* storage may be unavailable */ }
+
+    if ('serviceWorker' in navigator) {
+      // Register immediately after hydration so this also works when the load
+      // event has already fired before the component mounts.
+      navigator.serviceWorker.register('/sw.js').catch(() => {
+        // The portal remains fully usable if offline support is unavailable.
+      })
+    }
+
+    const isIOS = /iphone|ipad|ipod/i.test(window.navigator.userAgent)
+    const manualInstructions = isIOS
+      ? 'To install, open this page in Safari, tap Share, then choose “Add to Home Screen”.'
+      : 'Add this portal to your home screen from your browser menu, or install it when your browser offers the install option.'
+
+    if (!dismissed) {
+      setMessage(manualInstructions)
+      setVisible(true)
+    }
+
     const onBeforeInstall = (event: Event) => {
       event.preventDefault()
       setInstallEvent(event as InstallPromptEvent)
-      setVisible(true)
-      setMessage('Add the MUST Results Portal to your home screen for quicker access.')
+      if (!dismissed) {
+        setVisible(true)
+        setMessage('Install MUST Results Portal for quick access from your home screen.')
+      }
     }
+
     const onInstalled = () => {
       setVisible(false)
       setInstallEvent(null)
-      setMessage('MUST Results Portal has been added to your device.')
+      try { window.localStorage.setItem(DISMISSED_KEY, '1') } catch { /* storage may be unavailable */ }
     }
+
     window.addEventListener('beforeinstallprompt', onBeforeInstall)
     window.addEventListener('appinstalled', onInstalled)
     return () => {
@@ -46,18 +65,27 @@ export function PwaInstallPrompt() {
 
   async function install() {
     if (!installEvent) {
-      setMessage('To add this portal, open your browser menu and choose “Install app” or “Add to Home screen”.')
+      const isIOS = /iphone|ipad|ipod/i.test(window.navigator.userAgent)
+      setMessage(isIOS
+        ? 'In Safari, tap the Share icon, scroll the options and select “Add to Home Screen”, then confirm Add.'
+        : 'Open your browser menu (⋮) and choose “Install app” or “Add to Home screen”. The wording depends on your browser.')
       setVisible(true)
       return
     }
+
     await installEvent.prompt()
     const choice = await installEvent.userChoice
+    setInstallEvent(null)
     if (choice.outcome === 'accepted') {
-      setMessage('Installation started. You can open MUST Results Portal from your home screen.')
-      setInstallEvent(null)
+      setMessage('Installation was accepted. Open MUST Results Portal from your home screen.')
     } else {
       setMessage('Installation was cancelled. You can add the portal later from your browser menu.')
     }
+  }
+
+  function dismiss() {
+    setVisible(false)
+    try { window.localStorage.setItem(DISMISSED_KEY, '1') } catch { /* storage may be unavailable */ }
   }
 
   if (!visible) return null
@@ -69,8 +97,10 @@ export function PwaInstallPrompt() {
         <span>{message}</span>
       </div>
       <div className="pwa-install-actions">
-        <button type="button" onClick={install}> <span aria-hidden="true">↓</span> {installEvent ? 'Install' : 'How to add'}</button>
-        <button type="button" className="pwa-dismiss" aria-label="Dismiss install message" onClick={() => setVisible(false)}>×</button>
+        <button type="button" onClick={install}>
+          <span aria-hidden="true">↓</span> {installEvent ? 'Install app' : 'Add to Home'}
+        </button>
+        <button type="button" className="pwa-dismiss" aria-label="Dismiss install message" onClick={dismiss}>×</button>
       </div>
     </aside>
   )
