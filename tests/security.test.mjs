@@ -211,7 +211,7 @@ test('2026/27 faculty course listings are visible without inventing missing curr
 
 test('signup verification is domain-aware and external email activation is admin-controlled', async () => {
   const [migration, dashboard, actions] = await Promise.all([
-    readFile(new URL('../supabase/migrations/20261117203000_domain_aware_signup_verification.sql', import.meta.url), 'utf8'),
+    readFile(new URL('../supabase/migrations/20261117201908_domain_aware_signup_verification.sql', import.meta.url), 'utf8'),
     readFile(new URL('../app/dashboard/page.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../app/dashboard/actions.ts', import.meta.url), 'utf8'),
   ])
