@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#142d68"/>
+  <circle cx="256" cy="256" r="190" fill="none" stroke="#fcb900" stroke-width="12"/>
+  <circle cx="256" cy="256" r="166" fill="none" stroke="#ffffff" stroke-opacity=".25" stroke-width="4"/>
+  <path d="M128 176h256M128 224h256" stroke="#ffffff" stroke-opacity=".22" stroke-width="8" stroke-linecap="round"/>
+  <text x="256" y="300" fill="#ffffff" font-family="Arial,sans-serif" font-size="126" font-weight="800" text-anchor="middle">M</text>
+  <path d="M150 350h212" stroke="#fcb900" stroke-width="12" stroke-linecap="round"/>
+  <text x="256" y="390" fill="#ffffff" font-family="Arial,sans-serif" font-size="27" font-weight="700" letter-spacing="4" text-anchor="middle">MUST</text>
+</svg>
