@@ -117,13 +117,23 @@ export async function createCatalogueRecord(form: FormData) {
       !['PLANNED', 'OPEN', 'CLOSED'].includes(status) || ends_on <= starts_on) say('Check the semester, academic year and date range.')
     ;({ error } = await supabase.from('semesters').insert({ academic_year_id, name, starts_on, ends_on, status }))
   } else if (kind === 'course') {
-    const code = value(form, 'code').toUpperCase()
+    const codeValue = value(form, 'code').toUpperCase()
+    const code = codeValue || null
     const title = value(form, 'title')
     const department_id = id(form, 'department_id')
-    const credit_units = Number(value(form, 'credit_units'))
-    const level = Number(value(form, 'level'))
-    if (!code || !title || !validId(department_id) || !Number.isInteger(credit_units) || !Number.isInteger(level)) say('Check the course details and department.')
-    ;({ error } = await supabase.from('courses').insert({ code, title, department_id, credit_units, level }))
+    const rawCredits = value(form, 'credit_units')
+    const rawLevel = value(form, 'level')
+    const credit_units = rawCredits ? Number(rawCredits) : null
+    const level = rawLevel ? Number(rawLevel) : null
+    const validCode = !code || /^[A-Z0-9][A-Z0-9_-]{1,19}$/.test(code)
+    const validCredits = credit_units === null || (Number.isInteger(credit_units) && credit_units >= 1 && credit_units <= 30)
+    const validLevel = level === null || (Number.isInteger(level) && level >= 1 && level <= 6)
+    if (!title || title.length > 180 || !validId(department_id) || !validCode || !validCredits || !validLevel) say('Check the course title, optional code/academic details and department.')
+    ;({ error } = await supabase.from('courses').insert({
+      code, title, department_id, credit_units, level,
+      catalogue_source: 'ADMIN_ENTERED',
+      catalogue_status: 'PENDING_VERIFICATION',
+    }))
   } else if (kind === 'offering') {
     const course_id = id(form, 'course_id')
     const semester_id = id(form, 'semester_id')
