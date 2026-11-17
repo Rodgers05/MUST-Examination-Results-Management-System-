@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
-import { isMustInstitutionalEmail, isValidEmail, isValidPassword, hasRole, validateBatchMarks } from '../lib/validation.mjs'
+import { getSignupVerificationMode, isMustInstitutionalEmail, isValidEmail, isValidPassword, hasRole, validateBatchMarks } from '../lib/validation.mjs'
 import { resolveAuthOrigin } from '../lib/request-origin.mjs'
 import { safeAppPath } from '../lib/redirects.mjs'
 import { getStatusAppearance } from '../lib/status.mjs'
@@ -39,6 +39,10 @@ test('email syntax validation accepts normal domains; the MUST helper remains ex
   }
   for (const email of ['person@gmail.com', 'person@outlook.com', 'person@yahoo.co.uk']) assert.equal(isMustInstitutionalEmail(email), false, email)
   for (const email of ['person@must.ac.ug', 'person@std.must.ac.ug']) assert.equal(isMustInstitutionalEmail(email), true, email)
+  assert.equal(getSignupVerificationMode('person@must.ac.ug'), 'MUST_AUTO')
+  assert.equal(getSignupVerificationMode('person@std.must.ac.ug'), 'MUST_AUTO')
+  for (const email of ['person@gmail.com', 'person@outlook.com', 'person@yahoo.co.uk']) assert.equal(getSignupVerificationMode(email), 'ADMIN_REVIEW')
+  assert.equal(getSignupVerificationMode('not-an-email'), 'INVALID')
   for (const email of ['', 'person', 'person@', '@gmail.com', 'person gmail@gmail.com', 'person@gmail', 'a'.repeat(250) + '@gmail.com']) {
     assert.equal(isValidEmail(email), false, email)
   }
@@ -144,7 +148,9 @@ test('server contract uses verified claims, role gates, email verification and G
   assert.match(authActions, /await headers\(\)/)
   assert.match(authActions, /email_provider_disabled/)
   assert.match(authActions, /email_confirmed_at/)
-  assert.match(authActions.split('export async function register')[1].split('export async function login')[0], /isMustInstitutionalEmail/)
+  assert.match(authActions.split('export async function register')[1].split('export async function login')[0], /getSignupVerificationMode/)
+  assert.match(authActions, /verificationMode === 'MUST_AUTO'/)
+  assert.match(authActions, /administrator must verify your non-MUST email address/)
   assert.doesNotMatch(authActions.split('export async function login')[1].split('export async function googleSignIn')[0], /isMustInstitutionalEmail/)
   assert.match(authActions, /isCompromisedPassword\(password\)/)
   assert.match(authActions, /This password appears in known data breaches/)
@@ -178,9 +184,10 @@ test('server contract uses verified claims, role gates, email verification and G
   assert.match(profilePage, /welcome-actions[\s\S]*profile-signout/)
   assert.match(passwordActions, /resetPasswordForEmail/)
   assert.ok(passwordActions.includes('updateUser({ password })'))
-  assert.match(registerPage, /MUST institutional email address/)
-  assert.match(authActions, /isMustInstitutionalEmail/)
-  assert.match(registerPage, /student@std[.]must[.]ac[.]ug/)
+  assert.match(registerPage, /any valid email address/)
+  assert.match(registerPage, /automatically verified/)
+  assert.match(registerPage, /administrator verification/)
+  assert.doesNotMatch(authActions, /isMustInstitutionalEmail/)
 })
 
 test('2026/27 faculty course listings are visible without inventing missing curriculum metadata', async () => {
@@ -199,6 +206,25 @@ test('2026/27 faculty course listings are visible without inventing missing curr
   assert.match(dashboard, /Pending verification/)
   assert.match(dashboard, /Number\(item\.credit_units\) > 0/)
   assert.match(facultySelect, /No courses registered for this faculty/)
+})
+
+
+test('signup verification is domain-aware and external email activation is admin-controlled', async () => {
+  const [migration, dashboard, actions] = await Promise.all([
+    readFile(new URL('../supabase/migrations/20261117203000_domain_aware_signup_verification.sql', import.meta.url), 'utf8'),
+    readFile(new URL('../app/dashboard/page.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../app/dashboard/actions.ts', import.meta.url), 'utf8'),
+  ])
+  assert.match(migration, /before insert on auth\.users/i)
+  assert.match(migration, /must\.ac\.ug/)
+  assert.match(migration, /std\.must\.ac\.ug/)
+  assert.match(migration, /email_confirmed_at := coalesce/)
+  assert.match(migration, /case when v_is_must then 'ACTIVE' else 'PENDING' end/)
+  assert.match(migration, /if p_status = 'ACTIVE' then[\s\S]*?update auth\.users/i)
+  assert.match(migration, /email_verified = \(email_verified or p_status = 'ACTIVE'\)/)
+  assert.match(dashboard, /email_verified/)
+  assert.match(dashboard, /Admin verification required/)
+  assert.match(actions, /admin_set_user_access/)
 })
 
 test('repository ignore rules cover local credentials, backups and frontend snapshots', async () => {
