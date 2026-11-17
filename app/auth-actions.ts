@@ -81,7 +81,7 @@ export async function login(formData: FormData) {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
   if (error) {
     if (error.code === 'email_not_confirmed') {
-      note('/login', 'Your email address has not been verified. Open the confirmation email and follow its link. If you never received it, use the resend option on the registration page.')
+      note('/login', 'This email address is not verified yet. MUST addresses are verified automatically; non-MUST addresses must be verified by an administrator before sign-in is enabled.')
     }
     if (error.code === 'user_banned') {
       note('/login', 'This account is currently suspended. Contact the examinations administrator.')
