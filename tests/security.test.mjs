@@ -192,7 +192,7 @@ test('2026/27 faculty course listings are visible without inventing missing curr
   assert.match(migration, /MUST-VLE 2026\/27 UG Semester 1/)
   assert.match(migration, /VLE_LISTED_UNVERIFIED/)
   assert.match(migration, /alter column credit_units drop not null/)
-  assert.match(dashboard, /Registered course units by faculty/)
+  assert.match(dashboard, /Faculty course directory/)
   assert.match(dashboard, /Pending verification/)
   assert.match(dashboard, /Number\(item\.credit_units\) > 0/)
   assert.match(facultySelect, /No courses registered for this faculty/)
