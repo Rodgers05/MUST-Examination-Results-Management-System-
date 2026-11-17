@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { isMustInstitutionalEmail, isValidEmail, isValidPassword } from '@/lib/validation.mjs'
+import { getSignupVerificationMode, isValidEmail, isValidPassword } from '@/lib/validation.mjs'
 import { safeAppPath } from '@/lib/redirects.mjs'
 import { isCompromisedPassword } from '@/lib/password-security.mjs'
 import { resolveAuthOrigin } from '@/lib/request-origin.mjs'
