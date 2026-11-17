@@ -30,7 +30,7 @@ export function FacultyCourseSelect({ faculties, courses }: { faculties: Faculty
       <label htmlFor="offering-course">Course unit</label>
       <select id="offering-course" name="course_id" value={courseId} onChange={(event) => setCourseId(event.target.value)} disabled={!facultyId || facultyCourses.length === 0} required>
         <option value="">{!facultyId ? 'Select a faculty first' : facultyCourses.length ? 'Choose a course unit' : 'No courses registered for this faculty'}</option>
-        {facultyCourses.map((course) => <option key={course.id} value={course.id}>{course.code} · {course.title}</option>)}
+        {facultyCourses.map((course) => <option key={course.id} value={course.id}>{course.code ? course.code + ' · ' : ''}{course.title}</option>)}
       </select>
     </div>
   </>
