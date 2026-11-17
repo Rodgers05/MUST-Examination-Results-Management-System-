@@ -497,3 +497,64 @@ body::before {
 .pwa-install-actions{display:flex;align-items:center;gap:6px}.pwa-install-actions button{min-height:38px;padding:8px 12px;white-space:nowrap}.pwa-install-actions .pwa-dismiss{min-width:34px;width:34px;padding:4px;background:transparent!important;color:var(--muted);box-shadow:none;font-size:22px}
 @media(max-width:520px){.pwa-install-toast{left:10px;right:10px;bottom:10px;padding:11px;gap:9px}.pwa-install-icon{width:36px;height:36px;flex-basis:36px}.pwa-install-copy span{font-size:11px}.pwa-install-actions{gap:2px}.pwa-install-actions button{padding:7px 9px;font-size:12px}}
 @media(prefers-reduced-motion:reduce){.pwa-install-toast{scroll-behavior:auto}}
+
+
+/* Accessible, full-width password entry and eye visibility control */
+.password-control {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+}
+.password-control .password-input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 54px;
+  height: 54px;
+  padding: 13px 54px 13px 15px;
+  font-size: 16px;
+  line-height: 1.5;
+  letter-spacing: .02em;
+  border: 1px solid #aebbd0;
+  border-radius: 8px;
+  background: #fff;
+  color: #18243a;
+}
+.password-control .password-input:focus {
+  border-color: var(--must-blue);
+  box-shadow: 0 0 0 3px rgba(36,75,155,.14);
+}
+.password-control .password-toggle {
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+  min-height: 42px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #42516b;
+  cursor: pointer;
+}
+.password-control .password-toggle:hover {
+  background: #edf1f8;
+  color: var(--must-navy);
+}
+.password-control .password-toggle:focus-visible {
+  outline: 3px solid var(--must-gold);
+  outline-offset: 1px;
+}
+.auth-card .password-control .password-toggle {
+  width: 42px;
+  min-height: 42px;
+}
