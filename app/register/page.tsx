@@ -9,7 +9,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
     <><PortalHeader nav /><main className="auth-wrap">
       <section className="auth-art"><div className="auth-brand-note">MUST EXAMINATION SERVICES</div><div><div className="kicker">STUDENT ACCOUNT REQUEST</div><h1>Start with a verified email address.</h1><p>Registration creates a pending student profile. Staff roles are assigned by an administrator.</p></div><a href="https://www.must.ac.ug/" target="_blank" rel="noreferrer">Visit MUST website ↗</a></section>
       <section className="auth-card-wrap"><div className="auth-card">
-        <div className="kicker">CREATE ACCOUNT</div><h1>Student registration</h1><p className="muted">Use your MUST institutional email address (@must.ac.ug or @std.must.ac.ug). You must verify it before signing in.</p>
+        <div className="kicker">CREATE ACCOUNT</div><h1>Student registration</h1><p className="muted">You can register with any valid email address. MUST addresses (@must.ac.ug or @std.must.ac.ug) are automatically verified; other email addresses require administrator verification before account access is approved.</p>
         {notice && <div className="notice error">{notice}</div>}
         <form action={register}>
           <div className="field"><label htmlFor="full_name">Full name</label><input id="full_name" name="full_name" autoComplete="name" minLength={2} maxLength={120} required /></div>
