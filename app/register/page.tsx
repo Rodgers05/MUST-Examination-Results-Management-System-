@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { register, resendSignupConfirmation } from '@/app/auth-actions'
+import { register } from '@/app/auth-actions'
 import { PortalFooter, PortalHeader } from '@/app/components/portal-ui'
 import { PasswordField } from '@/app/components/password-field'
 
@@ -7,7 +7,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
   const { notice } = await searchParams
   return (
     <><PortalHeader nav /><main className="auth-wrap">
-      <section className="auth-art"><div className="auth-brand-note">MUST EXAMINATION SERVICES</div><div><div className="kicker">STUDENT ACCOUNT REQUEST</div><h1>Start with a verified email address.</h1><p>Registration creates a pending student profile. Staff roles are assigned by an administrator.</p></div><a href="https://www.must.ac.ug/" target="_blank" rel="noreferrer">Visit MUST website ↗</a></section>
+      <section className="auth-art"><div className="auth-brand-note">MUST EXAMINATION SERVICES</div><div><div className="kicker">STUDENT ACCOUNT REQUEST</div><h1>Create your account.</h1><p>MUST email addresses are automatically verified. Other email addresses are reviewed by an administrator. Staff roles remain administrator-controlled.</p></div><a href="https://www.must.ac.ug/" target="_blank" rel="noreferrer">Visit MUST website ↗</a></section>
       <section className="auth-card-wrap"><div className="auth-card">
         <div className="kicker">CREATE ACCOUNT</div><h1>Student registration</h1><p className="muted">You can register with any valid email address. MUST addresses (@must.ac.ug or @std.must.ac.ug) are automatically verified; other email addresses require administrator verification before account access is approved.</p>
         {notice && <div className="notice error">{notice}</div>}
@@ -18,10 +18,6 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
           <button type="submit">Request student account</button>
         </form>
         <div className="auth-divider"><span>ALREADY HAVE AN ACCOUNT?</span></div>
-        <form action={resendSignupConfirmation}>
-          <div className="field"><label htmlFor="resend_email">Resend confirmation email</label><input id="resend_email" name="email" type="email" autoComplete="email" placeholder="Enter your registered email" required /></div>
-          <button type="submit" className="secondary-button">Resend confirmation email</button>
-        </form>
         <p className="auth-foot">MUST email accounts are automatically verified. Non-MUST email accounts remain pending until an administrator verifies the address and approves access. <Link href="/login">Sign in</Link>.</p>
       </div></section>
     </main><PortalFooter /></>
