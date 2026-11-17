@@ -180,6 +180,24 @@ test('server contract uses verified claims, role gates, email verification and G
   assert.match(registerPage, /student@std[.]must[.]ac[.]ug/)
 })
 
+test('2026/27 faculty course listings are visible without inventing missing curriculum metadata', async () => {
+  const [dashboard, migration, facultySelect] = await Promise.all([
+    readFile(new URL('../app/dashboard/page.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../supabase/migrations/20261117193000_expand_2026_27_faculty_course_catalogue.sql', import.meta.url), 'utf8'),
+    readFile(new URL('../app/components/faculty-course-select.tsx', import.meta.url), 'utf8'),
+  ])
+  for (const facultyCode of ['FAEVS', 'FAST', 'FOBMS', 'FCI', 'FHS', 'FIS', 'FOS']) {
+    assert.match(migration, new RegExp("'" + facultyCode + "'"))
+  }
+  assert.match(migration, /MUST-VLE 2026\/27 UG Semester 1/)
+  assert.match(migration, /VLE_LISTED_UNVERIFIED/)
+  assert.match(migration, /alter column credit_units drop not null/)
+  assert.match(dashboard, /Registered course units by faculty/)
+  assert.match(dashboard, /Pending verification/)
+  assert.match(dashboard, /Number\(item\.credit_units\) > 0/)
+  assert.match(facultySelect, /No courses registered for this faculty/)
+})
+
 test('repository ignore rules cover local credentials, backups and frontend snapshots', async () => {
   const ignore = await readFile(new URL('../.gitignore', import.meta.url), 'utf8')
   for (const rule of ['.env', '.env.*', '!.env.example', 'node_modules/', '.next/', '.vercel/', 'backups/', 'frontend_backup_*/', 'frontend/*.before-*', 'frontend/*.backup.*', '*.dump', '*.backup.sql']) {
