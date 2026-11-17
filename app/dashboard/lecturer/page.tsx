@@ -28,8 +28,9 @@ export default async function LecturerMarksPage({ searchParams }: { searchParams
   const attendanceSessions = rows(attendanceSessionResult.data)
   const attendanceSessionIds = attendanceSessions.map(id)
   const assessmentIds = assessments.map(id)
+  const studentIds = [...new Set(enrollments.map((item) => value(item, 'student_id')))]
   // These independent reads run concurrently to reduce the lecturer workspace's critical path.
-  const [coursesResult, semestersResult, marksResult, attendanceRecordResult] = await Promise.all([
+  const [coursesResult, semestersResult, marksResult, attendanceRecordResult, studentProfilesResult] = await Promise.all([
     offerings.length
       ? supabase.from('courses').select('id,code,title,department_id').in('id', offerings.map((item) => value(item, 'course_id')))
       : Promise.resolve({ data: [], error: null }),
@@ -42,12 +43,18 @@ export default async function LecturerMarksPage({ searchParams }: { searchParams
     attendanceSessionIds.length
       ? supabase.from('attendance_records').select('session_id,student_id,attendance_status').in('session_id', attendanceSessionIds)
       : Promise.resolve({ data: [], error: null }),
+    studentIds.length
+      ? supabase.from('profiles').select('id,full_name,student_number').in('id', studentIds)
+      : Promise.resolve({ data: [], error: null }),
   ])
   const attendanceRecords = rows(attendanceRecordResult.data)
+  const studentProfileMap = new Map(rows(studentProfilesResult.data).map((item) => [id(item), item]))
+  const studentName = (studentId: string) => value(studentProfileMap.get(studentId) ?? {}, 'full_name') || 'Name unavailable'
+  const studentNumber = (studentId: string) => value(studentProfileMap.get(studentId) ?? {}, 'student_number') || 'Registration number unavailable'
   const courseMap = new Map(rows(coursesResult.data).map((item) => [id(item), item]))
   const semesterMap = new Map(rows(semestersResult.data).map((item) => [id(item), item]))
   const marks = rows(marksResult.data)
-  const hasError = Boolean(assignmentError || offeringResult.error || assessmentResult.error || enrollmentResult.error || submissionResult.error || attendanceSessionResult.error || attendanceRecordResult.error || coursesResult.error || semestersResult.error || marksResult.error)
+  const hasError = Boolean(assignmentError || offeringResult.error || assessmentResult.error || enrollmentResult.error || submissionResult.error || attendanceSessionResult.error || attendanceRecordResult.error || coursesResult.error || semestersResult.error || marksResult.error || studentProfilesResult.error)
   const offeringLabel = (offering: Row) => {
     const course = courseMap.get(value(offering, 'course_id'))
     const semester = semesterMap.get(value(offering, 'semester_id'))
@@ -93,9 +100,10 @@ export default async function LecturerMarksPage({ searchParams }: { searchParams
                 <input type="hidden" name="offering_id" value={offeringId} />
                 <div className="field"><label>Session date</label><input type="date" name="session_date" required /></div>
                 <div className="field"><label>Session title / topic</label><input name="session_title" minLength={2} maxLength={160} required placeholder="e.g. Lecture 3 — Data structures" /></div>
-                <DataTable headings={['Student ID','Attendance status']}>
+                <DataTable headings={['Student name','Registration number','Attendance status']}>
                   {students.map((student) => <tr key={value(student, 'student_id')}>
-                    <td><code>{value(student, 'student_id')}</code></td>
+                    <td>{studentName(value(student, 'student_id'))}</td>
+                    <td><code>{studentNumber(value(student, 'student_id'))}</code></td>
                     <td><select name={'attendance-' + value(student, 'student_id')} defaultValue="" required><option value="" disabled>Select status</option><option value="PRESENT">Present</option><option value="ABSENT">Absent</option></select></td>
                   </tr>)}
                 </DataTable>
@@ -110,13 +118,13 @@ export default async function LecturerMarksPage({ searchParams }: { searchParams
                     {courseSessions.map((session) => <tr key={id(session)}><td>{value(session, 'session_date')}</td><td>{value(session, 'session_title')}</td></tr>)}
                   </DataTable>
                   <h4>Attendance summary</h4>
-                  <DataTable headings={['Student ID','Present','Sessions recorded','Attendance','Exam eligibility']}>
+                  <DataTable headings={['Student name','Registration number','Present','Sessions recorded','Attendance','Exam eligibility']}>
                     {students.map((student) => {
                       const own = courseRecords.filter((record) => value(record, 'student_id') === value(student, 'student_id'))
                       const present = own.filter((record) => value(record, 'attendance_status') === 'PRESENT').length
                       const complete = own.length === courseSessions.length
                       const percentage = courseSessions.length ? Math.round((present / courseSessions.length) * 10000) / 100 : 0
-                      return <tr key={value(student, 'student_id')}><td><code>{value(student, 'student_id')}</code></td><td>{present}</td><td>{own.length}/{courseSessions.length}</td><td>{complete ? percentage + '%' : 'Incomplete'}</td><td><StatusBadge value={!complete ? 'IN_PROGRESS' : percentage >= 80 ? 'ELIGIBLE' : 'INELIGIBLE'} /></td></tr>
+                      return <tr key={value(student, 'student_id')}><td>{studentName(value(student, 'student_id'))}</td><td><code>{studentNumber(value(student, 'student_id'))}</code></td><td>{present}</td><td>{own.length}/{courseSessions.length}</td><td>{complete ? percentage + '%' : 'Incomplete'}</td><td><StatusBadge value={!complete ? 'IN_PROGRESS' : percentage >= 80 ? 'ELIGIBLE' : 'INELIGIBLE'} /></td></tr>
                     })}
                   </DataTable>
                 </> : <Empty>No attendance sessions have been recorded for this offering.</Empty>
@@ -124,8 +132,8 @@ export default async function LecturerMarksPage({ searchParams }: { searchParams
             </section>
             {!courseAssessments.length || !students.length ? <Empty>Add assessments and enrollments before entering marks.</Empty> : <form action={saveBatchMarks}>
               <input type="hidden" name="offering_id" value={offeringId} />
-              <DataTable headings={['Student ID', ...courseAssessments.map((item) => value(item, 'title') + ' (' + value(item, 'maximum_mark') + ')')]}>
-                {students.map((student) => <tr key={value(student, 'student_id')}><td><code>{value(student, 'student_id')}</code></td>{courseAssessments.map((assessment) => <td key={id(assessment)}><input aria-label={value(assessment, 'title') + ' mark for ' + value(student, 'student_id')} type="number" min="0" max={value(assessment, 'maximum_mark')} step="0.01" name={'mark-' + id(assessment) + '-' + value(student, 'student_id')} defaultValue={existing.get(id(assessment) + ':' + value(student, 'student_id')) ?? ''} disabled={Boolean(submission && value(submission, 'status') !== 'RETURNED')} /></td>)}</tr>)}
+              <DataTable headings={['Student name','Registration number', ...courseAssessments.map((item) => value(item, 'title') + ' (' + value(item, 'maximum_mark') + ')')]}>
+                {students.map((student) => <tr key={value(student, 'student_id')}><td>{studentName(value(student, 'student_id'))}</td><td><code>{studentNumber(value(student, 'student_id'))}</code></td>{courseAssessments.map((assessment) => <td key={id(assessment)}><input aria-label={value(assessment, 'title') + ' mark for ' + value(student, 'student_id')} type="number" min="0" max={value(assessment, 'maximum_mark')} step="0.01" name={'mark-' + id(assessment) + '-' + value(student, 'student_id')} defaultValue={existing.get(id(assessment) + ':' + value(student, 'student_id')) ?? ''} disabled={Boolean(submission && value(submission, 'status') !== 'RETURNED')} /></td>)}</tr>)}
               </DataTable>
               {(!submission || value(submission, 'status') === 'RETURNED') && <div className="actions"><button type="submit">Save marks</button></div>}
             </form>}
