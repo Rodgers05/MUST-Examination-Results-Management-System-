@@ -9,6 +9,7 @@ import {
   createSupportTicket,
   setSupportTicketStatus,
   publishSubmission,
+  enrollStudent,
   resubmitResults,
   reviewSubmission,
   saveBatchMarks,
@@ -42,6 +43,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const [{ notice }, profile] = await Promise.all([searchParams, requireActiveProfile()])
   const supabase = await createClient()
   const isAdmin = profile.role === 'ADMIN'
+  const isEnrollmentManager = isAdmin || profile.role === 'REGISTRAR'
   const [departmentResult, yearResult, semesterResult, courseResult, offeringResult, profileResult] = await Promise.all([
     read(supabase.from('departments').select('id,code,name').order('name')),
     read(supabase.from('academic_years').select('id,label,starts_on,ends_on,is_current').order('starts_on', { ascending: false })),
@@ -50,7 +52,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     read(supabase.from('course_offerings').select('id,course_id,semester_id,group_name').order('created_at', { ascending: false })),
     isAdmin
       ? read(supabase.from('profiles').select('id,institutional_email,full_name,student_number,staff_number,department_id,role,account_status,email_verified').order('full_name'))
-      : Promise.resolve({ rows: [] as Row[], error: null }),
+      : ['REGISTRAR', 'LECTURER', 'REVIEWER'].includes(profile.role)
+        ? read(supabase.from('profiles').select('id,full_name,student_number,role,account_status').order('full_name'))
+        : Promise.resolve({ rows: [] as Row[], error: null }),
   ])
   // Keep clearly marked seed/demo catalogue rows out of the live workspace.
   // The underlying rows are preserved until an administrator approves cleanup.
@@ -75,23 +79,29 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     ? supabase.from('course_staff').select('id,offering_id,user_id,assignment_role,assigned_by')
     : supabase.from('course_staff').select('id,offering_id,user_id,assignment_role').eq('user_id', profile.id)
   const { rows: assignments, error: assignmentError } = await read(assignmentQuery)
-  const offeringIds = isAdmin
+  const assignmentRole = profile.role === 'LECTURER' || profile.role === 'REVIEWER' || profile.role === 'REGISTRAR'
+    ? profile.role
+    : null
+  const roleAssignments = assignments.filter((item) => text(item, 'assignment_role') === assignmentRole)
+  // course_offerings RLS returns only the student's own active offerings, assigned staff offerings,
+  // or the global catalogue for authorised enrolment managers.
+  const offeringIds = isAdmin || profile.role === 'REGISTRAR' || profile.role === 'STUDENT'
     ? offerings.map((item) => uid(item))
-    : [...new Set(assignments.map((item) => text(item, 'offering_id')))]
+    : [...new Set(roleAssignments.map((item) => text(item, 'offering_id')))]
 
-  const enrollmentQuery = isAdmin
+  const enrollmentQuery = isEnrollmentManager
     ? supabase.from('enrollments').select('id,offering_id,student_id,enrollment_status')
     : profile.role === 'STUDENT'
-      ? supabase.from('enrollments').select('id,offering_id,student_id,enrollment_status').eq('student_id', profile.id)
-      : offeringIds.length
-        ? supabase.from('enrollments').select('id,offering_id,student_id,enrollment_status').in('offering_id', offeringIds)
+      ? supabase.from('enrollments').select('id,offering_id,student_id,enrollment_status').eq('student_id', profile.id).eq('enrollment_status', 'ENROLLED')
+      : profile.role === 'LECTURER' && offeringIds.length
+        ? supabase.from('enrollments').select('id,offering_id,student_id,enrollment_status').in('offering_id', offeringIds).eq('enrollment_status', 'ENROLLED')
         : null
   const assessmentQuery = offeringIds.length
     ? supabase.from('assessments').select('id,offering_id,title,assessment_type,maximum_mark,weight').in('offering_id', offeringIds)
     : null
   const submissionQuery = isAdmin
     ? supabase.from('result_submissions').select('id,offering_id,submitted_by,status,lecturer_note,reviewer_note,registrar_note,submitted_at,reviewed_at,approved_at,published_at').order('submitted_at', { ascending: false })
-    : offeringIds.length
+    : ['LECTURER', 'REVIEWER', 'REGISTRAR'].includes(profile.role) && offeringIds.length
       ? supabase.from('result_submissions').select('id,offering_id,submitted_by,status,lecturer_note,reviewer_note,registrar_note,submitted_at,reviewed_at,approved_at,published_at').in('offering_id', offeringIds).order('submitted_at', { ascending: false })
       : null
   const [enrollmentResult, assessmentResult, submissionResult] = await Promise.all([
@@ -240,7 +250,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 <form action={createCatalogueRecord} className="card half"><input type="hidden" name="kind" value="course" /><h3>Course</h3><p className="subtle">Only enter code, credit units and study level when confirmed by the approved programme curriculum.</p><div className="form-grid"><div className="field"><label>Course code (if verified)</label><input name="code" maxLength={20} /></div><div className="field"><label>Course title</label><input name="title" maxLength={180} required /></div></div><div className="form-grid"><div className="field"><label>Faculty</label><select name="department_id" required><option value="">Choose faculty</option><IdOptions items={departments} label={(item) => text(item, 'name')} /></select></div><div className="field"><label>Credit units (if verified)</label><input type="number" name="credit_units" min="1" max="30" /></div></div><div className="field"><label>Study level (if verified)</label><input type="number" name="level" min="1" max="6" /></div><button>Save course unit</button></form>
                 <form action={createCatalogueRecord} className="card half"><input type="hidden" name="kind" value="offering" /><h3>Course offering</h3><FacultyCourseSelect faculties={departments.map((item) => ({ id: uid(item), name: text(item, 'name') }))} courses={courses.filter((item) => Boolean(text(item, 'code') && Number(item.credit_units) > 0 && Number(item.level) > 0)).map((item) => ({ id: uid(item), code: text(item, 'code'), title: text(item, 'title'), department_id: text(item, 'department_id') }))} /><div className="field"><label>Semester</label><select name="semester_id" required><option value="">Choose semester</option><IdOptions items={semesters} label={(item) => text(item, 'name') + ' · ' + text(item, 'starts_on')} /></select></div><div className="field"><label>Group</label><input name="group_name" defaultValue="MAIN" /></div><button>Create offering</button></form>
                 <form action={createCatalogueRecord} className="card half"><input type="hidden" name="kind" value="staff" /><h3>Assign course staff</h3><div className="field"><label>Offering</label><select name="offering_id" required><option value="">Choose offering</option>{offerings.map((item) => <option key={uid(item)} value={uid(item)}>{offeringText(uid(item))}</option>)}</select></div><div className="field"><label>Active staff account</label><select name="user_id" required><option value="">Choose account</option><IdOptions items={people.filter((item) => text(item, 'role') !== 'STUDENT')} label={(item) => text(item, 'full_name') + ' · ' + text(item, 'role')} /></select></div><div className="field"><label>Assignment role</label><select name="assignment_role"><option>LECTURER</option><option>REVIEWER</option><option>REGISTRAR</option></select></div><button>Assign staff</button></form>
-                <form action={createCatalogueRecord} className="card half"><input type="hidden" name="kind" value="enrollment" /><h3>Enroll a student</h3><div className="field"><label>Offering</label><select name="offering_id" required><option value="">Choose offering</option>{offerings.map((item) => <option key={uid(item)} value={uid(item)}>{offeringText(uid(item))}</option>)}</select></div><div className="field"><label>Active student account</label><select name="student_id" required><option value="">Choose student</option><IdOptions items={students} label={(item) => text(item, 'full_name') + ' · ' + (text(item, 'student_number') || text(item, 'institutional_email'))} /></select></div><button>Enroll student</button></form>
+
               </div>
             </Card>}
 
@@ -248,12 +258,20 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               {profiles.length ? <Table headings={['User', 'Current access', 'Email verification', 'Set access']}>{profiles.map((user) => <tr key={uid(user)}><td>{text(user, 'full_name')}<br /><small>{text(user, 'institutional_email')}</small></td><td><span className="cell-primary">{text(user, 'role')}</span><StatusBadge value={text(user, 'account_status')} /></td><td>{text(user, 'email_verified') === 'true' ? <StatusBadge value="VERIFIED" /> : <StatusBadge value="PENDING" />}<small>{text(user, 'email_verified') === 'true' ? 'Verified' : 'Admin verification required'}</small></td><td><form action={setUserAccess} className="form-grid"><input type="hidden" name="user_id" value={uid(user)} /><select aria-label="Role" name="role" defaultValue={text(user, 'role')}>{['STUDENT', 'LECTURER', 'REVIEWER', 'REGISTRAR', 'ADMIN'].map((role) => <option key={role}>{role}</option>)}</select><select aria-label="Status" name="account_status" defaultValue={text(user, 'account_status')}>{['PENDING', 'ACTIVE', 'SUSPENDED'].map((item) => <option key={item}>{item}</option>)}</select><button>Save access</button></form></td></tr>)}</Table> : <Empty>No user profiles yet.</Empty>}
             </Card>}
 
-            {isAdmin && <Card title="Staff assignments and enrolments" note="Review course access and enrolled accounts before lecturers enter marks.">
-              <h3>Assigned course staff</h3>
-              {assignments.length ? <Table headings={['Offering', 'Staff member', 'Assignment']}>{assignments.map((assignment) => {
-                const person = profiles.find((item) => uid(item) === text(assignment, 'user_id'))
-                return <tr key={uid(assignment)}><td>{offeringText(text(assignment, 'offering_id'))}</td><td>{text(person ?? {}, 'full_name') || text(assignment, 'user_id')}</td><td>{text(assignment, 'assignment_role')}</td></tr>
-              })}</Table> : <Empty>No staff are assigned yet.</Empty>}
+            {isEnrollmentManager && <Card id="enrolments" title="Enrolment management" note="This register is restricted to administrators and authorised Registrar accounts. Lecturers receive only their assigned course rosters; students receive only their own current enrolments.">
+              {isAdmin && <>
+                <h3>Assigned course staff</h3>
+                {assignments.length ? <Table headings={['Offering', 'Staff member', 'Assignment']}>{assignments.map((assignment) => {
+                  const person = profiles.find((item) => uid(item) === text(assignment, 'user_id'))
+                  return <tr key={uid(assignment)}><td>{offeringText(text(assignment, 'offering_id'))}</td><td>{text(person ?? {}, 'full_name') || text(assignment, 'user_id')}</td><td>{text(assignment, 'assignment_role')}</td></tr>
+                })}</Table> : <Empty>No staff are assigned yet.</Empty>}
+              </>}
+              <h3 style={{marginTop:20}}>Enrol a student</h3>
+              <form action={enrollStudent} className="form-grid">
+                <div className="field"><label htmlFor="enrolment-offering">Course offering</label><select id="enrolment-offering" name="offering_id" required defaultValue=""><option value="" disabled>Choose offering</option>{offerings.map((item) => <option key={uid(item)} value={uid(item)}>{offeringText(uid(item))}</option>)}</select></div>
+                <div className="field"><label htmlFor="enrolment-student">Active student</label><select id="enrolment-student" name="student_id" required defaultValue=""><option value="" disabled>Choose student</option><IdOptions items={students} label={(item) => text(item, 'full_name') + ' · ' + (text(item, 'student_number') || 'Registration number not recorded')} /></select></div>
+                <button type="submit">Save enrolment</button>
+              </form>
               <h3 style={{marginTop:20}}>Enrolled students</h3>
               {enrollments.length ? <Table headings={['Offering', 'Student', 'Status']}>{enrollments.map((enrollment) => <tr key={uid(enrollment)}><td>{offeringText(text(enrollment, 'offering_id'))}</td><td>{studentName(text(enrollment, 'student_id'))}</td><td><StatusBadge value={text(enrollment, 'enrollment_status')} /></td></tr>)}</Table> : <Empty>No student enrolments are present.</Empty>}
             </Card>}
@@ -263,28 +281,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               {assessments.filter((item) => lecturerOfferingIds.includes(text(item, 'offering_id'))).length > 0 && <Table headings={['Offering', 'Assessment', 'Maximum', 'Weight']}>{assessments.filter((item) => lecturerOfferingIds.includes(text(item, 'offering_id'))).map((item) => <tr key={uid(item)}><td>{offeringText(text(item, 'offering_id'))}</td><td>{text(item, 'title')}</td><td>{text(item, 'maximum_mark')}</td><td>{text(item, 'weight')}%</td></tr>)}</Table>}
             </Card>}
 
-            {profile.role === 'LECTURER' && <Card id="marks" title="Batch mark entry" note="One row per enrolled student and assessment. Enter marks within each assessment maximum; RLS and the server validate the offering assignment. Student identifiers are shown because current RLS does not expose other students’ profile names to lecturers.">
-              {lecturerOfferingIds.map((offeringId) => {
-                const offerAssessments = assessments.filter((item) => text(item, 'offering_id') === offeringId)
-                const offerStudents = enrollments.filter((item) => text(item, 'offering_id') === offeringId && text(item, 'enrollment_status') === 'ENROLLED')
-                const submission = submissions.find((item) => text(item, 'offering_id') === offeringId)
-                const existing = new Map(marks.map((item) => [text(item, 'assessment_id') + ':' + text(item, 'student_id'), text(item, 'mark')]))
-                if (!offerAssessments.length || !offerStudents.length) return <div className="notice" key={offeringId}>{offeringText(offeringId)} needs assessments and enrolled students before mark entry.</div>
-                return <div key={offeringId} style={{marginTop:20}}><h3><OfferingLabel offering={currentOffering(offeringId) ?? {}} courses={courses} semesters={semesters} /> {submission && <>{status(text(submission, 'status'))}</>}</h3>
-                  {submission && text(submission, 'status') === 'RETURNED' && text(submission, 'reviewer_note') && <div className="notice error" role="status"><strong>Reviewer comments:</strong> {text(submission, 'reviewer_note')}</div>}
-                  <form action={saveBatchMarks}>
-                    <input type="hidden" name="offering_id" value={offeringId} />
-                    <Table headings={['Enrolled student ID', ...offerAssessments.map((item) => text(item, 'title') + ' / ' + text(item, 'maximum_mark'))]}>
-                      {offerStudents.map((student) => <tr key={uid(student, 'student_id')}><td><code>{text(student, 'student_id')}</code></td>{offerAssessments.map((assessment) => <td key={uid(assessment)}><input aria-label={text(assessment, 'title') + ' mark for student'} type="number" min="0" max={text(assessment, 'maximum_mark')} step="0.01" name={'mark-' + uid(assessment) + '-' + text(student, 'student_id')} defaultValue={existing.get(uid(assessment) + ':' + text(student, 'student_id')) ?? ''} disabled={Boolean(submission && text(submission, 'status') !== 'RETURNED')} /></td>)}</tr>)}
-                    </Table>
-                    {(!submission || text(submission, 'status') === 'RETURNED') && <div className="actions"><button type="submit">Save batch marks</button></div>}
-                  </form>
-                  {submission && text(submission, 'status') !== 'RETURNED' && <div className="notice">Marks are locked while this submission is under review, approved or published.</div>}
-                  {!submission && <form action={submitResults} className="form-grid" style={{marginTop:12}}><input type="hidden" name="offering_id" value={offeringId} /><div className="field"><label>Lecturer note (optional)</label><input name="lecturer_note" maxLength={500} /></div><button>Submit complete results</button></form>}
-                  {submission && text(submission, 'status') === 'RETURNED' && <form action={resubmitResults} className="form-grid" style={{marginTop:12}}><input type="hidden" name="submission_id" value={uid(submission)} /><div className="field"><label>Correction note</label><input name="lecturer_note" maxLength={500} required /></div><button>Resubmit corrected results</button></form>}
-                </div>
-              })}
-              {!lecturerOfferingIds.length && <Empty>No lecturer offerings are assigned to your account.</Empty>}
+            {profile.role === 'LECTURER' && <Card id="marks" title="Marks-entry workspace" note="The dedicated lecturer workspace is the primary place to record attendance, enter complete assessment batches, correct returned results and submit marks for review.">
+              <p>Open your assigned-course workspace to see the enrolled roster, student names and MUST registration numbers, existing marks, attendance eligibility and the current submission state.</p>
+              <div className="actions"><a className="button" href="/dashboard/lecturer">Open lecturer marks and attendance workspace</a></div>
             </Card>}
 
             {(profile.role === 'REVIEWER' || profile.role === 'REGISTRAR' || isAdmin) && <Card id="workflow" title={profile.role === 'REVIEWER' ? 'Reviewer queue' : profile.role === 'REGISTRAR' ? 'Registrar workflow' : 'Submission overview'} note="Actions are checked against your profile and course assignment, then authorized again by the database.">
