@@ -278,9 +278,11 @@ test('hardened write permissions are respected by dashboard actions', async () =
     readFile(new URL('../app/dashboard/actions.ts', import.meta.url), 'utf8'),
     readFile(new URL('../app/dashboard/page.tsx', import.meta.url), 'utf8'),
   ])
-  assert.match(actions, /\.upsert\(insertPayload, \{ onConflict: 'assessment_id,student_id', ignoreDuplicates: true \}\)/)
-  assert.match(actions, /assessment_id, student_id, mark, entered_by: profile\.id/)
-  assert.match(actions, /\.update\(\{ mark: mark\.mark, updated_by: profile\.id \}\)/)
+  assert.match(actions, /supabase\.rpc\('save_batch_marks'/)
+  assert.match(actions, /p_offering_id: offeringId/)
+  assert.match(actions, /validateBatchMarks/)
+  assert.match(actions, /actor\(\['LECTURER'\]\)/)
+  assert.doesNotMatch(actions, /\.from\('marks'\)\.upsert/)
   assert.doesNotMatch(actions, /\.from\('audit_logs'\)\.insert/)
   assert.doesNotMatch(actions, /\.from\('support_tickets'\)\.update/)
   assert.match(actions, /\.from\('support_tickets'\)\.insert\(\{ created_by: profile\.id, subject, message \}\)/)
@@ -290,11 +292,14 @@ test('hardened write permissions are respected by dashboard actions', async () =
   assert.doesNotMatch(dashboard, /updateSupportTicket/)
 })
 
-test('student results are read only for the authenticated profile', async () => {
-  const dashboard = await readFile(new URL('../app/dashboard/page.tsx', import.meta.url), 'utf8')
+test('student results are read only for the authenticated profile and lecturer corrections stay locked', async () => {
+  const [dashboard, lecturer] = await Promise.all([
+    readFile(new URL('../app/dashboard/page.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../app/dashboard/lecturer/page.tsx', import.meta.url), 'utf8'),
+  ])
   assert.match(dashboard, /profile\.role === 'STUDENT'[\s\S]*?published_results[\s\S]*?\.eq\('student_id', profile\.id\)/)
-  assert.match(dashboard, /Reviewer comments:/)
-  assert.match(dashboard, /Marks are locked while this submission is under review/)
+  assert.match(lecturer, /Reviewer feedback:/)
+  assert.match(lecturer, /Marks are locked while this submission is being reviewed, approved or published/)
 })
 
 test('shared MUST presentation keeps role navigation, mobile navigation and workflow sections', async () => {
