@@ -134,10 +134,22 @@ export async function setUserAccess(form: FormData) {
   const userId = id(form, 'user_id')
   const role = value(form, 'role')
   const status = value(form, 'account_status')
-  const studentNumber = value(form, 'student_number')
-  const staffNumber = value(form, 'staff_number')
+  const studentNumber = value(form, 'student_number').toUpperCase()
+  const staffNumber = value(form, 'staff_number').toUpperCase()
   if (!validId(userId) || !roles.includes(role as AppRole) || !['PENDING', 'ACTIVE', 'SUSPENDED'].includes(status)) say('Choose a valid profile, role and account status.')
   if (studentNumber.length > 40 || staffNumber.length > 40) say('Student and staff identifiers must be 40 characters or fewer.')
+  if ((role === 'STUDENT' && studentNumber && !/^[A-Z0-9/-]+$/.test(studentNumber)) ||
+      (role !== 'STUDENT' && staffNumber && !/^[A-Z0-9/-]+$/.test(staffNumber))) say('Use only letters, numbers, hyphens or slashes in official identifiers.')
+  if (role === 'STUDENT' && studentNumber) {
+    const { data: duplicate, error: duplicateError } = await supabase.from('profiles').select('id').eq('student_number', studentNumber).neq('id', userId).maybeSingle()
+    if (duplicateError) say('Could not verify whether this registration number is already in use.')
+    if (duplicate) say('That student registration number is already assigned to another account.')
+  }
+  if (role !== 'STUDENT' && staffNumber) {
+    const { data: duplicate, error: duplicateError } = await supabase.from('profiles').select('id').eq('staff_number', staffNumber).neq('id', userId).maybeSingle()
+    if (duplicateError) say('Could not verify whether this staff number is already in use.')
+    if (duplicate) say('That staff number is already assigned to another account.')
+  }
   const { error } = await supabase.rpc('admin_set_user_access', { p_user_id: userId, p_role: role, p_status: status })
   if (error) say('The database rejected the access change. Confirm your administrator access and selection.')
   const identifierUpdate = role === 'STUDENT' && studentNumber
