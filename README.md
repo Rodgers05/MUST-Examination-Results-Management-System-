@@ -1,127 +1,115 @@
 # MUST Examination Results Management System
 
-The primary application is a Next.js App Router application using Supabase Auth and PostgreSQL. The existing Express/MySQL backend and static frontend are retained as a rollback reference and can still be run with the legacy package scripts.
+A role-based examination results management portal built with **Next.js 16**, **React 19**, **Supabase Auth**, and **PostgreSQL**.
 
-See [docs/SUPABASE_NEXT_MIGRATION.md](docs/SUPABASE_NEXT_MIGRATION.md) for the current application setup, feature map, database security notes and verification status.
+**Live application:** https://must-exam-results.vercel.app  
+**University website:** https://www.must.ac.ug/
 
-The remainder of this README documents the preserved legacy Express/MySQL prototype. Its shared demonstration accounts are not valid for production and are intentionally omitted here. Legacy demo seeding is disabled when NODE_ENV is production.
+> This is a student-developed academic system. It is not an official MUST-operated information system. Use authorised test data until the university formally approves production use.
 
-## Requirements
+## Current application
 
-- Node.js 20 or newer
-- MySQL 8
+The Next.js App Router application at the repository root is the primary application. The older Express/MySQL prototype is retained for reference and is not the deployed application.
+
+### Main capabilities
+
+- Email/password registration and sign-in using Supabase Auth.
+- Google OAuth sign-in button (requires the Google provider and redirect URLs to be configured in Supabase and Google Cloud).
+- Password show/hide control on password fields.
+- Administrator-controlled account roles and activation.
+- Role-aware workspaces for **ADMIN**, **LECTURER**, **REVIEWER**, **REGISTRAR**, and **STUDENT**.
+- Academic catalogue: departments, academic years, semesters, courses and course offerings.
+- Student enrolment and staff course assignments.
+- Lecturer assessment setup and batch marks entry for assigned course offerings.
+- Marks validation against assessment maximums and configured assessment weights.
+- Result submission, review/return for correction, registrar approval and publication.
+- Student access to their own enrolled courses and published results.
+- Attendance register and exam-eligibility support.
+- Help/support tickets, audit records, profile settings and password recovery.
+- Responsive layouts and MUST-inspired navy, blue and gold visual styling.
+
+## Role visibility
+
+| Role | Intended access |
+|---|---|
+| ADMIN | User access, academic catalogue, course assignments, enrolments, system administration and support oversight. |
+| LECTURER | Assigned course offerings, eligible enrolled-student roster, assessments, marks entry and submission/correction workflow. |
+| REVIEWER | Assigned result submissions for review, return or recommendation according to workflow permissions. |
+| REGISTRAR | Reviewed submissions, approval and publication workflow. |
+| STUDENT | Own profile, own enrolments and own published results only. |
+
+Access is enforced through application checks and PostgreSQL row-level security (RLS). The database remains the authority for weighted final-mark and grade calculation during publication.
+
+## Local setup
+
+### Requirements
+
+- Node.js 20.9 or newer
 - npm
-- Postman (for API demonstration)
+- Supabase project credentials
 
-## Installation
-
-1. Install MySQL and start the database server.
-2. Import `database/schema.sql` into MySQL.
-3. Copy `.env.example` to `.env`.
-4. Configure database credentials and replace JWT_SECRET.
-5. Install dependencies:
-
-   npm install
-
-6. For the preserved legacy app only, set a local `LEGACY_DEMO_PASSWORD` (at least 12 characters) in `.env`, then create sample records:
-
-   npm run seed
-
-7. Start the legacy server:
-
-   npm run start:legacy
-
-8. Open:
-
-   http://localhost:3000
-
-## Database identifiers
-
-The demo seed creates one course, one semester and one student. Query the
-database to obtain their IDs:
-
-```sql
-SELECT * FROM courses;
-SELECT * FROM semesters;
-SELECT * FROM students;
-```
-
-Use those IDs in the lecturer submission form and Postman variables.
-
-## Workflow
-
-SUBMITTED -> VERIFIED -> APPROVED -> PUBLISHED
-
-SUBMITTED -> RETURNED -> SUBMITTED
-
-A reviewer must supply a reason when returning results. Only the assigned
-lecturer can correct and resubmit a returned submission.
-
-## API
-
-| Method | Endpoint | Access |
-|---|---|---|
-| POST | /api/auth/login | Public |
-| GET | /api/me | Authenticated |
-| GET | /api/courses | Authenticated |
-| GET | /api/students | Staff |
-| POST | /api/results | Lecturer |
-| GET | /api/results | Staff |
-| GET | /api/results/:id | Authorised staff |
-| PUT | /api/results/:id | Assigned lecturer |
-| PATCH | /api/results/:id/verify | Reviewer |
-| PATCH | /api/results/:id/approve | Approver |
-| PATCH | /api/results/:id/publish | Approver |
-| GET | /api/students/:studentId/results | That student |
-| GET | /api/audit | Administrator / approver |
-
-## Testing
-
-The automated integration tests require the database to be running and seeded.
-
-Run:
+### Install and run
 
 ```bash
-npm test
+npm install
+cp .env.example .env.local
+npm run dev
 ```
 
-The test suite exercises authentication, access control, submission,
-duplicate prevention, review, approval, publication and student access.
+On Windows PowerShell, create `.env.local` by copying `.env.example`:
 
-For repeatable tests, use a dedicated test database and reset it before
-each run. Do not run the workflow tests against real university data.
+```powershell
+Copy-Item .env.example .env.local
+```
 
-## Postman
+Set the environment variables in `.env.local` using the Supabase project URL and publishable/anon key. Never put a Supabase service-role or secret key in a `NEXT_PUBLIC_*` variable or commit it to Git.
 
-Import `postman/MUST_API_Collection.json`.
+Open http://localhost:3000.
 
-Set the base URL to `http://localhost:3000`.
+## Verification commands
 
-Login as each role and copy the returned token into the collection's
-`token` variable. Use the appropriate account for each protected route.
+```bash
+npm run lint
+npm run typecheck
+npm test
+npm run build
+```
 
-The collection includes the main workflow and invalid login/marks examples.
+Run tests against a dedicated test environment. Do not run destructive test fixtures against real student or examination data.
 
-## GitHub teamwork
+## Authentication configuration
 
-Suggested branches:
+1. Configure Supabase Auth email/password settings and a working SMTP sender for confirmation and password-recovery messages.
+2. Configure Google OAuth in Google Cloud and enable the Google provider in Supabase.
+3. Add the production origin `https://must-exam-results.vercel.app` and Supabase callback `https://axqknavghtqeyayglosr.supabase.co/auth/v1/callback` to the appropriate provider settings.
+4. Configure Supabase Site URL and allowed redirect URLs to include the production callback `https://must-exam-results.vercel.app/auth/callback`.
+5. Keep role assignment administrator-controlled. New self-registrations must not grant privileged roles.
 
-- feature/backend-api
-- feature/database
-- feature/authentication
-- feature/frontend
-- feature/postman-tests
-- docs/readme
+The application currently accepts syntactically valid email addresses from any domain, as required by the current project decision. Account activation and role assignment remain separate from email ownership verification.
 
-Each team member should commit their own work, push a feature branch,
-and open a pull request. Do not fabricate pull requests or contributions.
+## Database and deployment
 
-## Production considerations
+- Supabase PostgreSQL is the application database.
+- Vercel deploys the Next.js application from the GitHub repository.
+- Review and apply database migrations deliberately; a migration file committed to Git is **not** automatically applied to Supabase unless the migration workflow is explicitly run.
+- Keep production database backups and review RLS policies whenever tables, RPCs or role permissions change.
 
-This is an educational prototype, not an official MUST information system.
-Before real deployment, add university-approved grading rules, stronger
-account administration, CSRF protection if cookie authentication is adopted,
-comprehensive audit retention, backups, HTTPS, monitoring, access reviews,
-database migrations and a security assessment.
+## Security and release status
 
-Use fictional data for classroom demonstrations.
+The Supabase project has RLS enabled on its application tables and uses protected workflow functions for marks submission, review, resubmission, access administration and publication. These functions must retain their internal role, assignment and workflow-state checks.
+
+Known release checks that still require completion are tracked during deployment and testing:
+
+- Verify email confirmation and SMTP delivery end to end.
+- Confirm Google OAuth provider credentials and callback behaviour.
+- Apply and validate the pending email-verification hardening migration before relying on its database-side protections.
+- Review the authenticated `SECURITY DEFINER` RPC warnings and test each role boundary; do not revoke workflow RPC execution blindly.
+- Perform end-to-end tests with dedicated ADMIN, LECTURER, REVIEWER, REGISTRAR and STUDENT accounts, including negative permission tests.
+- Validate marks calculations, submission state transitions, publication and student result isolation using approved test records.
+- Confirm backup/restore, monitoring, audit retention and university sign-off before real institutional use.
+
+Supabase leaked-password protection may require a higher subscription tier. Where unavailable, retain strong password rules, secure reset flows, rate limiting and monitoring; document the plan limitation rather than claiming that breached-password screening is enabled.
+
+## Legacy prototype
+
+The previous Express/MySQL implementation and its scripts are retained only as a reference. It is not the live Next.js/Supabase application. Do not use legacy demo credentials or seed data in the production system.
