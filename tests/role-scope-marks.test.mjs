@@ -6,7 +6,7 @@ const read = (path) => readFile(new URL(path, import.meta.url), 'utf8')
 
 test('enrolment visibility is limited to authorised role scopes in UI and database RLS', async () => {
   const [migration, dashboard, lecturer, actions] = await Promise.all([
-    read('../supabase/migrations/20261118203100_role_scoped_enrollment_and_atomic_marks_entry.sql'),
+    read('../supabase/migrations/20261118203722_role_scoped_enrollment_and_atomic_marks_entry.sql'),
     read('../app/dashboard/page.tsx'),
     read('../app/dashboard/lecturer/page.tsx'),
     read('../app/dashboard/actions.ts'),
@@ -38,7 +38,7 @@ test('enrolment visibility is limited to authorised role scopes in UI and databa
 
 test('marks batches are complete, assignment-bound, maximum-bound and attendance-aware', async () => {
   const [migration, actions, lecturer, validation] = await Promise.all([
-    read('../supabase/migrations/20261118203100_role_scoped_enrollment_and_atomic_marks_entry.sql'),
+    read('../supabase/migrations/20261118203722_role_scoped_enrollment_and_atomic_marks_entry.sql'),
     read('../app/dashboard/actions.ts'),
     read('../app/dashboard/lecturer/page.tsx'),
     read('../lib/validation.mjs'),
