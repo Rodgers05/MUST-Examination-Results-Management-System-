@@ -26,22 +26,43 @@ test('email matching is case-insensitive and whitespace-trimmed', () => {
   assert.equal(isValidEmail('student@std.must.ac.ug'), true)
 })
 
-test('validates mark batches against assessment maxima and active enrolment', () => {
-  const assessments = [{ id: 'a1', maximum_mark: 30 }, { id: 'a2', maximum_mark: 70 }]
+test('validates complete mark batches against assessment maxima and active enrolment', () => {
+  const assessments = [
+    { id: 'a1', maximum_mark: 30, assessment_type: 'COURSEWORK' },
+    { id: 'a2', maximum_mark: 70, assessment_type: 'EXAM' },
+  ]
   const enrolled = ['student-1', 'student-2']
+  const eligible = ['student-1']
   const valid = validateBatchMarks([
     { assessment_id: 'a1', student_id: 'student-1', mark: 25 },
+    { assessment_id: 'a1', student_id: 'student-2', mark: 22 },
     { assessment_id: 'a2', student_id: 'student-1', mark: 60 },
-  ], assessments, enrolled)
-  assert.equal(valid.data.length, 2)
-  assert.equal(validateBatchMarks([{ assessment_id: 'unknown', student_id: 'student-1', mark: 10 }], assessments, enrolled).error !== undefined, true)
-  assert.equal(validateBatchMarks([{ assessment_id: 'a1', student_id: 'not-enrolled', mark: 10 }], assessments, enrolled).error !== undefined, true)
-  assert.equal(validateBatchMarks([{ assessment_id: 'a1', student_id: 'student-1', mark: 31 }], assessments, enrolled).error !== undefined, true)
-  assert.equal(validateBatchMarks([{ assessment_id: 'a1', student_id: 'student-1', mark: -1 }], assessments, enrolled).error !== undefined, true)
+  ], assessments, enrolled, eligible)
+  assert.equal(valid.error, undefined)
+  assert.equal(valid.data.length, 3)
+  assert.equal(validateBatchMarks([{ assessment_id: 'unknown', student_id: 'student-1', mark: 10 }], assessments, enrolled, eligible).error !== undefined, true)
+  assert.equal(validateBatchMarks([{ assessment_id: 'a1', student_id: 'not-enrolled', mark: 10 }], assessments, enrolled, eligible).error !== undefined, true)
+  assert.equal(validateBatchMarks([
+    { assessment_id: 'a1', student_id: 'student-1', mark: 31 },
+    { assessment_id: 'a1', student_id: 'student-2', mark: 22 },
+    { assessment_id: 'a2', student_id: 'student-1', mark: 60 },
+  ], assessments, enrolled, eligible).error !== undefined, true)
+  assert.equal(validateBatchMarks([
+    { assessment_id: 'a1', student_id: 'student-1', mark: -1 },
+    { assessment_id: 'a1', student_id: 'student-2', mark: 22 },
+    { assessment_id: 'a2', student_id: 'student-1', mark: 60 },
+  ], assessments, enrolled, eligible).error !== undefined, true)
   assert.equal(validateBatchMarks([
     { assessment_id: 'a1', student_id: 'student-1', mark: 10 },
     { assessment_id: 'a1', student_id: 'student-1', mark: 11 },
-  ], assessments, enrolled).error !== undefined, true)
+    { assessment_id: 'a1', student_id: 'student-2', mark: 22 },
+    { assessment_id: 'a2', student_id: 'student-1', mark: 60 },
+  ], assessments, enrolled, eligible).error !== undefined, true)
+  assert.equal(validateBatchMarks([
+    { assessment_id: 'a1', student_id: 'student-1', mark: 10 },
+    { assessment_id: 'a1', student_id: 'student-2', mark: 22 },
+    { assessment_id: 'a2', student_id: 'student-2', mark: 60 },
+  ], assessments, enrolled, eligible).error !== undefined, true)
 })
 
 test('role checks require active accounts and an explicitly allowed role', () => {
