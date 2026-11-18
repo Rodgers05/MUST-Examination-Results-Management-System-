@@ -103,22 +103,49 @@ test('role permission helper requires an active profile and an allowed role', ()
   assert.equal(hasRole({ role: 'ADMIN', account_status: 'SUSPENDED' }, ['ADMIN']), false)
 })
 
-test('batch mark validation enforces maximums, enrolment and unique student-assessment pairs', () => {
-  const assessments = [{ id: 'assessment-a', maximum_mark: 40 }, { id: 'assessment-b', maximum_mark: 60 }]
+test('batch mark validation enforces complete matrices, maximums, enrolment, uniqueness and exam eligibility', () => {
+  const assessments = [
+    { id: 'assessment-a', maximum_mark: 40, assessment_type: 'TEST' },
+    { id: 'assessment-b', maximum_mark: 60, assessment_type: 'EXAM' },
+  ]
   const enrolled = ['student-a', 'student-b']
+  const eligible = ['student-a']
   const valid = validateBatchMarks([
     { assessment_id: 'assessment-a', student_id: 'student-a', mark: 39.5 },
+    { assessment_id: 'assessment-a', student_id: 'student-b', mark: 35 },
     { assessment_id: 'assessment-b', student_id: 'student-a', mark: 50 },
-  ], assessments, enrolled)
+  ], assessments, enrolled, eligible)
   assert.equal(valid.error, undefined)
-  assert.equal(valid.data.length, 2)
-  assert.match(validateBatchMarks([{ assessment_id: 'assessment-a', student_id: 'student-a', mark: 41 }], assessments, enrolled).error, /maximum/)
-  assert.match(validateBatchMarks([{ assessment_id: 'assessment-a', student_id: 'other-student', mark: 20 }], assessments, enrolled).error, /enrolled/)
+  assert.equal(valid.data.length, 3)
+  assert.match(validateBatchMarks([
+    { assessment_id: 'assessment-a', student_id: 'student-a', mark: 39.5 },
+    { assessment_id: 'assessment-a', student_id: 'student-b', mark: 35 },
+    { assessment_id: 'assessment-b', student_id: 'student-a', mark: 61 },
+  ], assessments, enrolled, eligible).error, /maximum/)
+  assert.match(validateBatchMarks([
+    { assessment_id: 'assessment-a', student_id: 'other-student', mark: 20 },
+  ], assessments, enrolled, eligible).error, /enrolled/)
   assert.match(validateBatchMarks([
     { assessment_id: 'assessment-a', student_id: 'student-a', mark: 20 },
     { assessment_id: 'assessment-a', student_id: 'student-a', mark: 22 },
-  ], assessments, enrolled).error, /one row/)
-  assert.ok(validateBatchMarks([], assessments, enrolled).error)
+    { assessment_id: 'assessment-a', student_id: 'student-b', mark: 35 },
+    { assessment_id: 'assessment-b', student_id: 'student-a', mark: 50 },
+  ], assessments, enrolled, eligible).error, /one row/)
+  assert.match(validateBatchMarks([
+    { assessment_id: 'assessment-a', student_id: 'student-a', mark: 20 },
+    { assessment_id: 'assessment-a', student_id: 'student-b', mark: 35 },
+  ], assessments, enrolled, eligible).error, /one mark for every/)
+  assert.match(validateBatchMarks([
+    { assessment_id: 'assessment-a', student_id: 'student-a', mark: 20 },
+    { assessment_id: 'assessment-a', student_id: 'student-b', mark: 35 },
+    { assessment_id: 'assessment-b', student_id: 'student-b', mark: 40 },
+  ], assessments, enrolled, eligible).error, /Examination marks are disabled/)
+  assert.match(validateBatchMarks([
+    { assessment_id: 'assessment-a', student_id: 'student-a', mark: '' },
+    { assessment_id: 'assessment-a', student_id: 'student-b', mark: 35 },
+    { assessment_id: 'assessment-b', student_id: 'student-a', mark: 50 },
+  ], assessments, enrolled, eligible).error, /numeric mark/)
+  assert.ok(validateBatchMarks([], assessments, enrolled, eligible).error)
 })
 
 test('server contract uses verified claims, role gates, email verification and Google OAuth', async () => {
