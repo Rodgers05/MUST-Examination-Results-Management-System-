@@ -155,6 +155,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     const person = profiles.find((item) => uid(item) === text(assignment, 'user_id'))
     return person && text(person, 'role') !== text(assignment, 'assignment_role')
   })
+  const validLecturerAssignments = assignments.filter((assignment) => {
+    const person = profiles.find((item) => uid(item) === text(assignment, 'user_id'))
+    return text(assignment, 'assignment_role') === 'LECTURER' && text(person ?? {}, 'role') === 'LECTURER'
+  })
+  const offeringsWithoutAssessments = offerings.filter((offering) => !assessments.some((assessment) => text(assessment, 'offering_id') === uid(offering)))
   const studentName = (idValue: string) => {
     const rosterStudent = rosterByStudent.get(idValue)
     if (rosterStudent) return text(rosterStudent, 'full_name') || text(rosterStudent, 'student_number') || idValue
@@ -250,6 +255,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
             {isAdmin && <Card id="account-quality" title="Account data quality review" note="Use official MUST records when completing identifiers. Do not invent student or staff numbers.">
               <div className="stats">
+                <div className="stat"><strong>{validLecturerAssignments.length}</strong><span>Valid lecturer course assignments</span></div>
+                <div className="stat"><strong>{offeringsWithoutAssessments.length}</strong><span>Offerings without assessment setup</span></div>
+                <div className="stat"><strong>{enrollments.filter((item) => text(item, 'enrollment_status') === 'ENROLLED').length}</strong><span>Active enrolments</span></div>
                 <div className="stat"><strong>{missingStudentNumbers.length}</strong><span>Students missing registration numbers</span></div>
                 <div className="stat"><strong>{missingStaffNumbers.length}</strong><span>Staff missing staff numbers</span></div>
                 <div className="stat"><strong>{assignmentMismatches.length}</strong><span>Course assignment / account role mismatches</span></div>
