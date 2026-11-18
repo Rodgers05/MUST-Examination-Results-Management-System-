@@ -106,6 +106,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     ? await read(supabase.from('marks').select('id,assessment_id,student_id,mark').in('assessment_id', assessmentIds))
     : { rows: [] as Row[], error: null }
   const marks = marksResult.rows
+  const rosterResponses = await Promise.all(offeringIds.map(async (offeringId) => {
+    const response = await supabase.rpc('get_assigned_offering_student_roster', { p_offering_id: offeringId })
+    return { offeringId, rows: list(response.data), error: response.error }
+  }))
+  const rosterRows = rosterResponses.flatMap((response) => response.rows)
+  const rosterByStudent = new Map(rosterRows.map((student) => [uid(student, 'student_id'), student]))
 
   const publishedQuery = profile.role === 'STUDENT'
     ? supabase.from('published_results').select('id,offering_id,student_id,coursework_mark,exam_mark,total_mark,grade,grade_value,publication_status,published_at').eq('student_id', profile.id).order('published_at', { ascending: false })
@@ -126,7 +132,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const dashboardHasQueryErrors = [
     departmentResult.error, yearResult.error, semesterResult.error, courseResult.error,
     offeringResult.error, profileResult.error, assignmentError, enrollmentResult.error,
-    assessmentResult.error, submissionResult.error, marksResult.error, publishedResult.error,
+    assessmentResult.error, submissionResult.error, marksResult.error, rosterResponses.some((response) => response.error), publishedResult.error,
     ticketsResult.error, auditResult.error, reviewActions.error,
   ].some(Boolean)
 
@@ -137,9 +143,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const people = profiles.filter((item) => text(item, 'account_status') === 'ACTIVE')
   const students = people.filter((item) => text(item, 'role') === 'STUDENT')
   const studentName = (idValue: string) => {
+    const rosterStudent = rosterByStudent.get(idValue)
+    if (rosterStudent) return text(rosterStudent, 'full_name') || text(rosterStudent, 'student_number') || idValue
     const found = profiles.find((item) => uid(item) === idValue)
     return found ? text(found, 'full_name') : idValue
   }
+  const studentNumber = (idValue: string) => text(rosterByStudent.get(idValue) ?? {}, 'student_number') || 'Not recorded'
   const currentOffering = (idValue: string) => offerings.find((item) => uid(item) === idValue)
   const offeringText = (idValue: string) => {
     const found = currentOffering(idValue)
@@ -256,8 +265,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                   {submission && text(submission, 'status') === 'RETURNED' && text(submission, 'reviewer_note') && <div className="notice error" role="status"><strong>Reviewer comments:</strong> {text(submission, 'reviewer_note')}</div>}
                   <form action={saveBatchMarks}>
                     <input type="hidden" name="offering_id" value={offeringId} />
-                    <Table headings={['Enrolled student ID', ...offerAssessments.map((item) => text(item, 'title') + ' / ' + text(item, 'maximum_mark'))]}>
-                      {offerStudents.map((student) => <tr key={uid(student, 'student_id')}><td><code>{text(student, 'student_id')}</code></td>{offerAssessments.map((assessment) => <td key={uid(assessment)}><input aria-label={text(assessment, 'title') + ' mark for student'} type="number" min="0" max={text(assessment, 'maximum_mark')} step="0.01" name={'mark-' + uid(assessment) + '-' + text(student, 'student_id')} defaultValue={existing.get(uid(assessment) + ':' + text(student, 'student_id')) ?? ''} disabled={Boolean(submission && text(submission, 'status') !== 'RETURNED')} /></td>)}</tr>)}
+                    <Table headings={['Student name', 'Registration number', ...offerAssessments.map((item) => text(item, 'title') + ' / ' + text(item, 'maximum_mark'))]}>
+                      {offerStudents.map((student) => <tr key={uid(student, 'student_id')}><td><strong>{studentName(text(student, 'student_id'))}</strong><small className="subtle" style={{display:'block'}}>{text(rosterByStudent.get(text(student, 'student_id')) ?? {}, 'institutional_email')}</small></td><td><code>{studentNumber(text(student, 'student_id'))}</code></td>{offerAssessments.map((assessment) => <td key={uid(assessment)}><input aria-label={text(assessment, 'title') + ' mark for ' + studentName(text(student, 'student_id'))} type="number" min="0" max={text(assessment, 'maximum_mark')} step="0.01" name={'mark-' + uid(assessment) + '-' + text(student, 'student_id')} defaultValue={existing.get(uid(assessment) + ':' + text(student, 'student_id')) ?? ''} disabled={Boolean(submission && text(submission, 'status') !== 'RETURNED')} /></td>)}
+                      </tr>)}
                     </Table>
                     {(!submission || text(submission, 'status') === 'RETURNED') && <div className="actions"><button type="submit">Save batch marks</button></div>}
                   </form>
