@@ -547,3 +547,5 @@ body::before {
 .auth-card .google-signin-button{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;min-height:46px;padding:10px 16px;background:#fff;color:#263238;border:1px solid #d6dbe3;border-radius:8px;box-shadow:0 1px 2px rgba(0,0,0,.06);font-weight:700}
 .auth-card .google-signin-button:hover{background:#f8faff;border-color:#aebbd0}
 .google-mark{width:20px;height:20px;flex:0 0 20px}
+
+.mobile-signout{padding:12px 0 4px;border-top:1px solid var(--border);margin-top:8px}.mobile-signout button{width:100%;min-height:42px;justify-content:center}
