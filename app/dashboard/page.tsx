@@ -12,7 +12,6 @@ import {
   enrollStudent,
   resubmitResults,
   reviewSubmission,
-  saveBatchMarks,
   setUserAccess,
   submitResults,
 } from './actions'
