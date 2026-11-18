@@ -148,6 +148,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const visibleOfferings = offerings.filter((item) => visibleOfferingIds.has(uid(item)))
   const people = profiles.filter((item) => text(item, 'account_status') === 'ACTIVE')
   const students = people.filter((item) => text(item, 'role') === 'STUDENT')
+  const missingStudentNumbers = students.filter((item) => !text(item, 'student_number').trim())
+  const missingStaffNumbers = people.filter((item) => text(item, 'role') !== 'STUDENT' && !text(item, 'staff_number').trim())
+  const assignmentMismatches = assignments.filter((assignment) => {
+    const person = profiles.find((item) => uid(item) === text(assignment, 'user_id'))
+    return person && text(person, 'role') !== text(assignment, 'assignment_role')
+  })
   const studentName = (idValue: string) => {
     const rosterStudent = rosterByStudent.get(idValue)
     if (rosterStudent) return text(rosterStudent, 'full_name') || text(rosterStudent, 'student_number') || idValue
@@ -239,6 +245,24 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 <form action={createCatalogueRecord} className="card half"><input type="hidden" name="kind" value="staff" /><h3>Assign course staff</h3><div className="field"><label>Offering</label><select name="offering_id" required><option value="">Choose offering</option>{offerings.map((item) => <option key={uid(item)} value={uid(item)}>{offeringText(uid(item))}</option>)}</select></div><div className="field"><label>Active staff account</label><select name="user_id" required><option value="">Choose account</option><IdOptions items={people.filter((item) => text(item, 'role') !== 'STUDENT')} label={(item) => text(item, 'full_name') + ' · ' + text(item, 'role')} /></select></div><div className="field"><label>Assignment role</label><select name="assignment_role"><option>LECTURER</option><option>REVIEWER</option><option>REGISTRAR</option></select></div><button>Assign staff</button></form>
                 <form action={createCatalogueRecord} className="card half"><input type="hidden" name="kind" value="enrollment" /><h3>Enroll a student</h3><div className="field"><label>Offering</label><select name="offering_id" required><option value="">Choose offering</option>{offerings.map((item) => <option key={uid(item)} value={uid(item)}>{offeringText(uid(item))}</option>)}</select></div><div className="field"><label>Active student account</label><select name="student_id" required><option value="">Choose student</option><IdOptions items={students} label={(item) => text(item, 'full_name') + ' · ' + (text(item, 'student_number') || text(item, 'institutional_email'))} /></select></div><button>Enroll student</button></form>
               </div>
+            </Card>}
+
+            {isAdmin && <Card id="account-quality" title="Account data quality review" note="Use official MUST records when completing identifiers. Do not invent student or staff numbers.">
+              <div className="stats">
+                <div className="stat"><strong>{missingStudentNumbers.length}</strong><span>Students missing registration numbers</span></div>
+                <div className="stat"><strong>{missingStaffNumbers.length}</strong><span>Staff missing staff numbers</span></div>
+                <div className="stat"><strong>{assignmentMismatches.length}</strong><span>Course assignment / account role mismatches</span></div>
+              </div>
+              {assignmentMismatches.length > 0 && <div className="notice error" role="alert"><strong>Review required:</strong> Some course staff assignments do not match the account's approved role. Review these assignments before granting access to academic workflows.
+                <Table headings={['Account', 'Approved account role', 'Course assignment role', 'Offering']}>
+                  {assignmentMismatches.map((assignment) => {
+                    const person = profiles.find((item) => uid(item) === text(assignment, 'user_id'))
+                    return <tr key={uid(assignment)}><td>{text(person ?? {}, 'full_name')}<small className="subtle" style={{display:'block'}}>{text(person ?? {}, 'institutional_email')}</small></td><td>{text(person ?? {}, 'role')}</td><td>{text(assignment, 'assignment_role')}</td><td>{offeringText(text(assignment, 'offering_id'))}</td></tr>
+                  })}
+                </Table>
+              </div>}
+              {missingStudentNumbers.length > 0 && <p className="subtle">Student registration numbers must be entered from the official student register in Account access administration below.</p>}
+              {missingStaffNumbers.length > 0 && <p className="subtle">Staff numbers must be entered from the official staff records in Account access administration below.</p>}
             </Card>}
 
             {isAdmin && <Card id="access" title="Account access administration" note="New users always arrive as pending students. Use this panel only after verifying a person's institutional status.">
