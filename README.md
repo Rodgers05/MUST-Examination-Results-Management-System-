@@ -76,7 +76,7 @@ For a local-only legacy demonstration, configure the `DB_HOST`, `DB_PORT`, `DB_U
 npm run start:legacy
 ```
 
-The legacy Postman collection is `postman/MUST_API_Collection.json`. It contains example requests and expected negative cases, but a collection file is not execution evidence. The legacy API and MySQL schema require a separate security and integration test before being used for assessment or deployment; the current role-based access guarantees apply to the Next.js/Supabase application and its RLS policies.
+The legacy Postman collection is `postman/MUST_API_Collection.json`. It contains example requests and expected negative cases, but a collection file is not execution evidence. The legacy API currently has permissive CORS and unscoped student/result list/detail routes; do not expose it publicly or use real student records. It requires assignment-scoped authorization, a separate security/integration test and an explicit bridge decision before being used for assessment or deployment. The current role-based access guarantees apply to the Next.js/Supabase application and its RLS policies.
 
 ## Local development setup
 
