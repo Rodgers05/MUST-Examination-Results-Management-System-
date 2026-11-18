@@ -19,13 +19,13 @@ A web-based examination-results workflow for Mbarara University of Science and T
 
 | Role | Intended access |
 |---|---|
-| **ADMIN** | User access and role administration, academic catalogue, course offerings, staff assignments, enrolment management and system-wide administration. |
-| **REGISTRAR** | Registrar functions and course-offering responsibilities only where the account has the relevant assignment and permissions. |
-| **LECTURER** | Assigned course offerings, enrolled students in those offerings, assessment setup, attendance and marks entry/submission. |
-| **REVIEWER** | Assigned submissions for review, verification or return with comments; no general enrolment-management access. |
-| **STUDENT** | Their own enrolled courses and their own published results only. |
+| **ADMIN** | User access and role administration, academic catalogue, course offerings, staff assignments, global enrolment management and system administration. |
+| **REGISTRAR** | Global enrolment management, plus approval/publication actions only for assigned result submissions. |
+| **LECTURER** | Only course offerings assigned through `course_staff`, the active enrolled roster for those offerings, assessment setup, attendance and marks entry/submission. |
+| **REVIEWER** | Assigned result submissions, their marks and the minimum student identity needed to review; no direct enrolment-table or global roster access. |
+| **STUDENT** | Only their own active enrolments in the current open academic year, related assessment information and their own published results. Historical published results remain available to the student. |
 
-The dashboard should not expose a global enrolment register to every role. The current dashboard's global staff/enrolment management view is admin-gated; lecturer views are scoped to assigned offerings, and student enrolment queries are scoped to the signed-in student. Database row-level security (RLS) and server-side authorization must remain the enforcement boundary—hiding a screen alone is not sufficient.
+The global enrolment register and enrolment administration are restricted to **ADMIN** and **REGISTRAR**. Lecturers receive only the active roster for their own assigned offerings. Reviewers do not query the enrolment table and receive only assigned submission context. Students are scoped by their authenticated user ID and current enrolment. PostgreSQL RLS enforces these scopes independently of dashboard visibility.
 
 ## Marks and results workflow
 
@@ -37,6 +37,8 @@ The lecturer workspace is available at `/dashboard/lecturer`. It is designed to 
 4. The authorised reviewer verifies the submission or returns it with comments.
 5. The authorised Registrar/approver completes the approval and publication steps.
 6. Students view only their own published results.
+
+Marks are saved through an atomic database RPC. It rejects incomplete or duplicate student-assessment pairs, out-of-range marks, wrong-course assessments, non-enrolled students, unassigned lecturers and locked submission states. Examination mark fields are disabled until a student's attendance register is complete and attendance is at least 80%; PostgreSQL also enforces that rule for direct database writes. The current submission trigger blocks the whole offering if any active enrolment is below 80% or has incomplete attendance, so the Registrar must resolve any exception before submission.
 
 The application uses protected Supabase workflow functions for review, returned-result resubmission and publication. Final weighted totals and grades are calculated by the database publishing function; do not replace this with an unapproved client-side grade calculation.
 
@@ -53,7 +55,7 @@ The application uses protected Supabase workflow functions for review, returned-
 - Google sign-in is available in the interface but requires the Google provider and redirect URLs to be configured in Supabase.
 - Email confirmation requires a verified SMTP sender domain and working Supabase SMTP configuration.
 
-Relevant current signup migration: `supabase/migrations/20261117201908_domain_aware_signup_verification.sql`.
+Relevant current signup migration: `supabase/migrations/20261117201908_domain_aware_signup_verification.sql`. The latest role/marks security migration is `supabase/migrations/20261118203100_role_scoped_enrollment_and_atomic_marks_entry.sql`.
 
 ## Technology stack
 
@@ -63,6 +65,18 @@ Relevant current signup migration: `supabase/migrations/20261117201908_domain_aw
 - **Authorization:** application server actions, PostgreSQL RLS and protected database functions
 - **Testing:** Node.js test runner, ESLint and TypeScript
 - **Legacy prototype only:** Express 5, MySQL 8, JWT and Postman
+
+## Legacy Express API and Postman prototype
+
+The repository also retains an Express/MySQL API for the original Etivity prototype. It is **not the API used by the current Next.js/Supabase portal** and it is not connected to the live Supabase database. It must not be presented as proof that the current frontend is integrated with Express.
+
+For a local-only legacy demonstration, configure the `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` and a long random `JWT_SECRET` in a local `.env` file, prepare the legacy MySQL schema and demo records, then run:
+
+```bash
+npm run start:legacy
+```
+
+The legacy Postman collection is `postman/MUST_API_Collection.json`. It contains example requests and expected negative cases, but a collection file is not execution evidence. The legacy API and MySQL schema require a separate security and integration test before being used for assessment or deployment; the current role-based access guarantees apply to the Next.js/Supabase application and its RLS policies.
 
 ## Local development setup
 
