@@ -10,10 +10,8 @@ import {
   setSupportTicketStatus,
   publishSubmission,
   enrollStudent,
-  resubmitResults,
   reviewSubmission,
   setUserAccess,
-  submitResults,
 } from './actions'
 
 type Row = Record<string, unknown>
