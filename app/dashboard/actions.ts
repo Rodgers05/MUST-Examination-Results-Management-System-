@@ -135,11 +135,24 @@ export async function setUserAccess(form: FormData) {
   const userId = id(form, 'user_id')
   const role = value(form, 'role')
   const status = value(form, 'account_status')
+  const studentNumber = value(form, 'student_number')
+  const staffNumber = value(form, 'staff_number')
   if (!validId(userId) || !roles.includes(role as AppRole) || !['PENDING', 'ACTIVE', 'SUSPENDED'].includes(status)) say('Choose a valid profile, role and account status.')
+  if (studentNumber.length > 40 || staffNumber.length > 40) say('Student and staff identifiers must be 40 characters or fewer.')
   const { error } = await supabase.rpc('admin_set_user_access', { p_user_id: userId, p_role: role, p_status: status })
   if (error) say('The database rejected the access change. Confirm your administrator access and selection.')
+  const identifierUpdate = role === 'STUDENT' && studentNumber
+    ? { student_number: studentNumber }
+    : role !== 'STUDENT' && staffNumber
+      ? { staff_number: staffNumber }
+      : null
+  if (identifierUpdate) {
+    const { error: identifierError } = await supabase.from('profiles').update(identifierUpdate).eq('id', userId)
+    if (identifierError) say('Access was updated, but the identifier could not be saved. Check the number and try again.')
+  }
   revalidatePath('/dashboard')
-  say('Account access updated.')
+  revalidatePath('/dashboard/profile')
+  say('Account access and available identifier details updated.')
 }
 
 export async function createAssessment(form: FormData) {
