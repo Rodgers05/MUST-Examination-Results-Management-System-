@@ -84,6 +84,21 @@ export default async function LecturerMarksPage({ searchParams }: { searchParams
           const courseAssessments = assessments.filter((item) => value(item, 'offering_id') === offeringId)
           const students = enrollments.filter((item) => value(item, 'offering_id') === offeringId)
           const submission = submissions.find((item) => value(item, 'offering_id') === offeringId)
+          const courseSessions = attendanceSessions.filter((session) => value(session, 'offering_id') === offeringId)
+          const courseRecords = attendanceRecords.filter((record) => courseSessions.some((session) => id(session) === value(record, 'session_id')))
+          const examEligibleStudentIds = new Set(students.filter((student) => {
+            const studentId = value(student, 'student_id')
+            const own = courseRecords.filter((record) => value(record, 'student_id') === studentId)
+            const present = own.filter((record) => value(record, 'attendance_status') === 'PRESENT').length
+            return courseSessions.length > 0 && own.length === courseSessions.length && present / courseSessions.length >= 0.8
+          }).map((student) => value(student, 'student_id')))
+          const examEligibility = (studentId: string) => {
+            if (!courseSessions.length) return 'IN_PROGRESS'
+            const own = courseRecords.filter((record) => value(record, 'student_id') === studentId)
+            if (own.length !== courseSessions.length) return 'IN_PROGRESS'
+            const present = own.filter((record) => value(record, 'attendance_status') === 'PRESENT').length
+            return present / courseSessions.length >= 0.8 ? 'ELIGIBLE' : 'INELIGIBLE'
+          }
           const existing = new Map(marks.map((item) => [value(item, 'assessment_id') + ':' + value(item, 'student_id'), value(item, 'mark')]))
           const totalWeight = courseAssessments.reduce((sum, item) => sum + Number(item.weight), 0)
           const courseworkWeight = courseAssessments.filter((item) => value(item, 'assessment_type') !== 'EXAM').reduce((sum, item) => sum + Number(item.weight), 0)
@@ -110,8 +125,6 @@ export default async function LecturerMarksPage({ searchParams }: { searchParams
                 <button type="submit">Save complete attendance register</button>
               </form> : <Empty>Enrol students before recording attendance.</Empty>}
               {(() => {
-                const courseSessions = attendanceSessions.filter((session) => value(session, 'offering_id') === offeringId)
-                const courseRecords = attendanceRecords.filter((record) => courseSessions.some((session) => id(session) === value(record, 'session_id')))
                 return courseSessions.length ? <>
                   <h4>Recorded sessions ({courseSessions.length})</h4>
                   <DataTable headings={['Date','Session / topic']}>
@@ -130,11 +143,24 @@ export default async function LecturerMarksPage({ searchParams }: { searchParams
                 </> : <Empty>No attendance sessions have been recorded for this offering.</Empty>
               })()}
             </section>
+            {students.some((student) => !examEligibleStudentIds.has(value(student, 'student_id'))) && <div className="notice" role="status">Examination mark fields are disabled for students whose attendance register is incomplete or below 80%. The current submission rule also blocks the offering until every active enrolment meets the verified attendance threshold; refer any exception to the Academic Registrar.</div>}
             {students.some((student) => !studentNumber(value(student, 'student_id')) || studentNumber(value(student, 'student_id')) === 'Not recorded') && <div className="notice error" role="alert">One or more enrolled students have no registration number recorded in their MUST profile. The system will not invent one; ask the Registrar or administrator to complete the student records before final submission.</div>}
             {!courseAssessments.length || !students.length ? <Empty>Add assessments and enrollments before entering marks.</Empty> : <form action={saveBatchMarks}>
               <input type="hidden" name="offering_id" value={offeringId} />
-              <DataTable headings={['Student full name','MUST registration number', ...courseAssessments.map((item) => value(item, 'title') + ' (' + value(item, 'maximum_mark') + ')')]}>
-                {students.map((student) => <tr key={value(student, 'student_id')}><td>{studentName(value(student, 'student_id'))}</td><td><code>{studentNumber(value(student, 'student_id'))}</code></td>{courseAssessments.map((assessment) => <td key={id(assessment)}><input aria-label={value(assessment, 'title') + ' mark for ' + studentName(value(student, 'student_id')) + ', registration number ' + studentNumber(value(student, 'student_id'))} type="number" min="0" max={value(assessment, 'maximum_mark')} step="0.01" name={'mark-' + id(assessment) + '-' + value(student, 'student_id')} defaultValue={existing.get(id(assessment) + ':' + value(student, 'student_id')) ?? ''} disabled={Boolean(submission && value(submission, 'status') !== 'RETURNED')} /></td>)}</tr>)}
+              <DataTable headings={['Student full name','MUST registration number','Exam eligibility', ...courseAssessments.map((item) => value(item, 'title') + ' (' + value(item, 'maximum_mark') + ')')]}>
+                {students.map((student) => {
+                  const studentId = value(student, 'student_id')
+                  return <tr key={studentId}>
+                    <td>{studentName(studentId)}</td>
+                    <td><code>{studentNumber(studentId)}</code></td>
+                    <td><StatusBadge value={examEligibility(studentId)} /></td>
+                    {courseAssessments.map((assessment) => {
+                      const isLocked = Boolean(submission && value(submission, 'status') !== 'RETURNED')
+                      const isIneligibleExam = value(assessment, 'assessment_type') === 'EXAM' && !examEligibleStudentIds.has(studentId)
+                      return <td key={id(assessment)}><input aria-label={value(assessment, 'title') + ' mark for ' + studentName(studentId) + ', registration number ' + studentNumber(studentId)} type="number" min="0" max={value(assessment, 'maximum_mark')} step="0.01" name={'mark-' + id(assessment) + '-' + studentId} defaultValue={existing.get(id(assessment) + ':' + studentId) ?? ''} disabled={isLocked || isIneligibleExam} required /></td>
+                    })}
+                  </tr>
+                })}
               </DataTable>
               {(!submission || value(submission, 'status') === 'RETURNED') && <div className="actions"><button type="submit">Save marks</button></div>}
             </form>}
