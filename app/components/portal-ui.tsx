@@ -87,7 +87,7 @@ export function DashboardFrame({ profile, children }: { profile: Profile; childr
     </aside>
     <div className="dashboard-main">
       <header className="topbar"><div className="mobile-brand"><MustBrand subtitle="Examination Services" /></div><div className="topbar-title"><span className="crumb">MUST / {profile.role} workspace</span><strong>Examination Results Management System</strong></div><div className="userbar"><Link href="/dashboard/profile" className="userbar-profile" aria-label="Open my profile">{avatarUrl ? <img className="avatar avatar-image" src={avatarUrl} alt=""/> : <span className="avatar" aria-hidden="true">{initials}</span>}<span className="user-meta"><strong>{displayName}</strong><small>{profile.role}</small><StatusBadge value={profile.account_status} /></span></Link></div></header>
-      <div className="mobile-nav"><details><summary>Workspace menu</summary><nav aria-label="Mobile workspace navigation"><WorkspaceLinks profile={profile} /></nav></details></div>
+      <div className="mobile-nav"><details><summary>Workspace menu</summary><nav aria-label="Mobile workspace navigation"><WorkspaceLinks profile={profile} /><form action="/auth/logout" method="post" className="mobile-signout"><button type="submit" className="button secondary">Sign out</button></form></nav></details></div>
       {children}
       <PortalFooter />
     </div>
