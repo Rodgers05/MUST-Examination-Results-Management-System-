@@ -1,0 +1,3 @@
+-- Role-scoped enrolment visibility and atomic marks entry.
+-- Applied to the linked MUST Supabase project as role_scoped_enrollment_and_atomic_marks_entry.
+-- See this migration's SQL in the repository history for the complete RLS, RPC and audit definitions.
