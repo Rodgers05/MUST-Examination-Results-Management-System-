@@ -5,8 +5,9 @@ import { readFile } from 'node:fs/promises'
 const read = (path) => readFile(new URL(path, import.meta.url), 'utf8')
 
 test('enrolment visibility is limited to authorised role scopes in UI and database RLS', async () => {
-  const [migration, dashboard, lecturer, actions] = await Promise.all([
+  const [migration, catalogueMigration, dashboard, lecturer, actions] = await Promise.all([
     read('../supabase/migrations/20261118203722_role_scoped_enrollment_and_atomic_marks_entry.sql'),
+    read('../supabase/migrations/20261118204415_scope_catalog_metadata_to_visible_offerings.sql'),
     read('../app/dashboard/page.tsx'),
     read('../app/dashboard/lecturer/page.tsx'),
     read('../app/dashboard/actions.ts'),
@@ -20,6 +21,11 @@ test('enrolment visibility is limited to authorised role scopes in UI and databa
   assert.doesNotMatch(enrollmentReadPolicy, /REVIEWER/)
   assert.match(migration, /s\.status = 'OPEN'[\s\S]*?y\.is_current = true/)
   assert.match(migration, /private\.can_view_assigned_student\(id\)/)
+  for (const policy of ['departments_read_authorized', 'courses_read_authorized', 'semesters_read_authorized', 'academic_years_read_authorized']) {
+    assert.ok(catalogueMigration.includes(policy), policy)
+  }
+  assert.match(catalogueMigration, /private\.is_enrollment_manager\(\)/)
+  assert.match(catalogueMigration, /private\.is_enrolled\(o\.id\)/)
 
   assert.match(dashboard, /const isEnrollmentManager = isAdmin \|\| profile\.role === 'REGISTRAR'/)
   assert.match(dashboard, /isEnrollmentManager && <Card id="enrolments"/)
