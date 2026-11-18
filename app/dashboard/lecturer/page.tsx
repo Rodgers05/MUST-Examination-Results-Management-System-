@@ -66,6 +66,11 @@ export default async function LecturerMarksPage({ searchParams }: { searchParams
       <section className="welcome"><div><div className="kicker">LECTURER WORKSPACE</div><h1>Marks and assessment entry</h1><p>Manage coursework, end-of-semester examinations and results for your assigned courses.</p></div><span className="tag">ASSIGNED COURSES ONLY</span></section>
       {notice && <div className="notice" role="status">{notice}</div>}
       {hasError && <div className="notice error" role="alert">Some course information could not be loaded. Refresh the page or contact support.</div>}
+      {offerings.length > 0 && <Card title="Choose an assigned course offering" note="Select a course to jump to its enrolled roster and marks grid. Only offerings assigned to your lecturer account are listed.">
+        <nav className="actions" aria-label="Choose assigned course offering">
+          {offerings.map((item) => <a className="button secondary" key={id(item)} href={'#offering-' + id(item)}>{offeringLabel(item)}</a>)}
+        </nav>
+      </Card>}
       <section className="notice"><strong>MUST assessment rules:</strong> Coursework contributes up to 40 marks and the end-of-semester examination up to 60 marks. Coursework must include at least two tests, or one test and one assignment/take-home assessment. Publish coursework marks at least two weeks before examinations. A minimum 80% attendance is required to qualify for university examinations.</section>
       <Card title="Assessment setup" note="Create the coursework components and one end-of-semester examination for each assigned course. Weights must total 100% before submission.">
         <form action={createAssessment} className="form-grid">
@@ -103,7 +108,7 @@ export default async function LecturerMarksPage({ searchParams }: { searchParams
           const totalWeight = courseAssessments.reduce((sum, item) => sum + Number(item.weight), 0)
           const courseworkWeight = courseAssessments.filter((item) => value(item, 'assessment_type') !== 'EXAM').reduce((sum, item) => sum + Number(item.weight), 0)
           const examWeight = courseAssessments.filter((item) => value(item, 'assessment_type') === 'EXAM').reduce((sum, item) => sum + Number(item.weight), 0)
-          return <section key={offeringId} className="card">
+          return <section id={'offering-' + offeringId} key={offeringId} className="card">
             <h3>{offeringLabel(offering)}</h3>
             <p className="subtle">Coursework: {courseworkWeight}% / 40% maximum · Examination: {examWeight}% / 60% maximum · Total configured: {totalWeight}%</p>
             {submission && <p><StatusBadge value={value(submission, 'status')} /></p>}
