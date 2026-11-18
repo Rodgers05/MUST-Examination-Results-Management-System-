@@ -55,7 +55,7 @@ The application uses protected Supabase workflow functions for review, returned-
 - Google sign-in is available in the interface but requires the Google provider and redirect URLs to be configured in Supabase.
 - Email confirmation requires a verified SMTP sender domain and working Supabase SMTP configuration.
 
-Relevant current signup migration: `supabase/migrations/20261117201908_domain_aware_signup_verification.sql`. The latest role/marks security migration is `supabase/migrations/20261118203100_role_scoped_enrollment_and_atomic_marks_entry.sql`.
+Relevant current signup migration: `supabase/migrations/20261117201908_domain_aware_signup_verification.sql`. The latest role/marks security migration is `supabase/migrations/20261118203722_role_scoped_enrollment_and_atomic_marks_entry.sql`.
 
 ## Technology stack
 
