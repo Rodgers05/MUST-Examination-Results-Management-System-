@@ -68,6 +68,8 @@ test('marks batches are complete, assignment-bound, maximum-bound and attendance
   assert.match(migration, /marks_exam_attendance_eligibility/)
   assert.match(actions, /supabase\.rpc\('save_batch_marks'/)
   assert.match(actions, /validateBatchMarks\([\s\S]*?eligibleStudentIds/)
+  assert.match(lecturer, /Choose an assigned course offering/)
+  assert.match(lecturer, /id=\{'offering-' \+ offeringId\}/)
   assert.match(lecturer, /Exam eligibility/)
   assert.match(lecturer, /isIneligibleExam/)
   assert.match(lecturer, /disabled=\{isLocked \|\| isIneligibleExam\}/)
