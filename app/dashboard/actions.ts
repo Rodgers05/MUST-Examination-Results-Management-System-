@@ -166,6 +166,23 @@ export async function setUserAccess(form: FormData) {
   say('Account access and available identifier details updated.')
 }
 
+export async function removeInvalidStaffAssignment(form: FormData) {
+  const { supabase } = await actor(['ADMIN'])
+  const assignmentId = id(form, 'assignment_id')
+  if (!validId(assignmentId)) say('Choose a valid staff assignment.')
+  const { data: assignment, error: assignmentError } = await supabase.from('course_staff')
+    .select('id,user_id,assignment_role').eq('id', assignmentId).maybeSingle()
+  if (assignmentError || !assignment) say('The staff assignment could not be found.')
+  const { data: assignedProfile, error: profileError } = await supabase.from('profiles')
+    .select('role').eq('id', assignment.user_id).maybeSingle()
+  if (profileError || !assignedProfile) say('The account linked to this assignment could not be verified.')
+  if (assignedProfile.role === assignment.assignment_role) say('This assignment matches the account role and cannot be removed through the mismatch cleanup.')
+  const { error } = await supabase.from('course_staff').delete().eq('id', assignmentId)
+  if (error) say('The invalid staff assignment could not be removed. Check administrator permissions.')
+  revalidatePath('/dashboard')
+  say('The role-mismatched staff assignment has been removed.')
+}
+
 export async function createAssessment(form: FormData) {
   const { profile, supabase } = await actor(['ADMIN', 'LECTURER'])
   const offering_id = id(form, 'offering_id')
