@@ -24,6 +24,11 @@ export default async function LecturerMarksPage({ searchParams }: { searchParams
   const assessments = rows(assessmentResult.data)
   const enrollments = rows(enrollmentResult.data)
   const submissions = rows(submissionResult.data)
+  const rosterResponses = await Promise.all(offeringIds.map(async (offeringId) => {
+    const response = await supabase.rpc('get_assigned_offering_student_roster', { p_offering_id: offeringId })
+    return { offeringId, data: rows(response.data), error: response.error }
+  }))
+  const rosterByOffering = new Map(rosterResponses.map((response) => [response.offeringId, response.data]))
   const coursesResult = offerings.length
     ? await supabase.from('courses').select('id,code,title,department_id').in('id', offerings.map((item) => value(item, 'course_id')))
     : { data: [], error: null }
@@ -37,7 +42,7 @@ export default async function LecturerMarksPage({ searchParams }: { searchParams
     ? await supabase.from('marks').select('assessment_id,student_id,mark').in('assessment_id', assessmentIds)
     : { data: [], error: null }
   const marks = rows(marksResult.data)
-  const hasError = Boolean(assignmentError || offeringResult.error || assessmentResult.error || enrollmentResult.error || submissionResult.error || coursesResult.error || semestersResult.error || marksResult.error)
+  const hasError = Boolean(assignmentError || offeringResult.error || assessmentResult.error || enrollmentResult.error || submissionResult.error || rosterResponses.some((response) => response.error) || coursesResult.error || semestersResult.error || marksResult.error)
   const offeringLabel = (offering: Row) => {
     const course = courseMap.get(value(offering, 'course_id'))
     const semester = semesterMap.get(value(offering, 'semester_id'))
@@ -65,7 +70,7 @@ export default async function LecturerMarksPage({ searchParams }: { searchParams
         {offerings.length ? offerings.map((offering) => {
           const offeringId = id(offering)
           const courseAssessments = assessments.filter((item) => value(item, 'offering_id') === offeringId)
-          const students = enrollments.filter((item) => value(item, 'offering_id') === offeringId)
+          const students = rosterByOffering.get(offeringId) ?? []
           const submission = submissions.find((item) => value(item, 'offering_id') === offeringId)
           const existing = new Map(marks.map((item) => [value(item, 'assessment_id') + ':' + value(item, 'student_id'), value(item, 'mark')]))
           const totalWeight = courseAssessments.reduce((sum, item) => sum + Number(item.weight), 0)
@@ -76,10 +81,15 @@ export default async function LecturerMarksPage({ searchParams }: { searchParams
             <p className="subtle">Coursework: {courseworkWeight}% / 40% maximum · Examination: {examWeight}% / 60% maximum · Total configured: {totalWeight}%</p>
             {submission && <p><StatusBadge value={value(submission, 'status')} /></p>}
             {submission && value(submission, 'status') === 'RETURNED' && <div className="notice error"><strong>Reviewer feedback:</strong> {value(submission, 'reviewer_note') || 'Review the returned marks and correct them.'}</div>}
-            {!courseAssessments.length || !students.length ? <Empty>Add assessments and enrollments before entering marks.</Empty> : <form action={saveBatchMarks}>
+            {!courseAssessments.length || !students.length ? <Empty>Add assessments and enrol students before entering marks.</Empty> : <form action={saveBatchMarks}>
               <input type="hidden" name="offering_id" value={offeringId} />
-              <DataTable headings={['Student ID', ...courseAssessments.map((item) => value(item, 'title') + ' (' + value(item, 'maximum_mark') + ')')]}>
-                {students.map((student) => <tr key={value(student, 'student_id')}><td><code>{value(student, 'student_id')}</code></td>{courseAssessments.map((assessment) => <td key={id(assessment)}><input aria-label={value(assessment, 'title') + ' mark for ' + value(student, 'student_id')} type="number" min="0" max={value(assessment, 'maximum_mark')} step="0.01" name={'mark-' + id(assessment) + '-' + value(student, 'student_id')} defaultValue={existing.get(id(assessment) + ':' + value(student, 'student_id')) ?? ''} disabled={Boolean(submission && value(submission, 'status') !== 'RETURNED')} /></td>)}</tr>)}
+              <DataTable headings={['Student name', 'Registration number', 'Attendance', ...courseAssessments.map((item) => value(item, 'title') + ' (' + value(item, 'maximum_mark') + ')')]}>
+                {students.map((student) => <tr key={value(student, 'student_id')}>
+                  <td><strong>{value(student, 'full_name') || 'Name not recorded'}</strong><small className="subtle" style={{display:'block'}}>{value(student, 'institutional_email')}</small></td>
+                  <td><code>{value(student, 'student_number') || 'Not recorded'}</code></td>
+                  <td>{value(student, 'attendance_percentage') ? value(student, 'attendance_percentage') + '%' : 'Not recorded'}<small className="subtle" style={{display:'block'}}>{student.examination_eligible ? 'Exam eligible' : 'Exam eligibility not confirmed'}</small></td>
+                  {courseAssessments.map((assessment) => <td key={id(assessment)}><input aria-label={value(assessment, 'title') + ' mark for ' + value(student, 'student_number')} type="number" min="0" max={value(assessment, 'maximum_mark')} step="0.01" name={'mark-' + id(assessment) + '-' + value(student, 'student_id')} defaultValue={existing.get(id(assessment) + ':' + value(student, 'student_id')) ?? ''} disabled={Boolean(submission && value(submission, 'status') !== 'RETURNED')} /></td>)}
+                </tr>)}
               </DataTable>
               {(!submission || value(submission, 'status') === 'RETURNED') && <div className="actions"><button type="submit">Save marks</button></div>}
             </form>}
