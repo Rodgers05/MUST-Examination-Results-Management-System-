@@ -70,7 +70,7 @@ Relevant current signup migration: `supabase/migrations/20261117201908_domain_aw
 
 The repository also retains an Express/MySQL API for the original Etivity prototype. It is **not the API used by the current Next.js/Supabase portal** and it is not connected to the live Supabase database. It must not be presented as proof that the current frontend is integrated with Express.
 
-For a local-only legacy demonstration, configure the `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` and a long random `JWT_SECRET` in a local `.env` file, prepare the legacy MySQL schema and demo records, then run:
+For a local-only legacy demonstration, configure the `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` and a long random `JWT_SECRET` in a local `.env` file, prepare the legacy MySQL schema and demo records, then set `PORT=5000` in that local `.env` file (the current Next.js portal uses port 3000), then run:
 
 ```bash
 npm run start:legacy
