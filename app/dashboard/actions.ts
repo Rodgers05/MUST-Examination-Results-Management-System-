@@ -11,6 +11,7 @@ const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}
 const id = (form: FormData, key: string) => String(form.get(key) ?? '').trim()
 const value = (form: FormData, key: string) => String(form.get(key) ?? '').trim()
 const say = (message: string): never => redirect('/dashboard?notice=' + encodeURIComponent(message))
+const sayAt = (path: string, message: string): never => redirect(path + '?notice=' + encodeURIComponent(message))
 const validId = (candidate: string) => uuidPattern.test(candidate)
 type ValidatedMark = { assessment_id: string; student_id: string; mark: number }
 
@@ -163,6 +164,28 @@ export async function createCatalogueRecord(form: FormData) {
   say('Catalogue record saved.')
 }
 
+export async function enrollStudent(form: FormData) {
+  const { supabase } = await actor(['ADMIN', 'REGISTRAR'])
+  const offeringId = id(form, 'offering_id')
+  const studentId = id(form, 'student_id')
+  if (!validId(offeringId) || !validId(studentId)) say('Choose a valid course offering and student.')
+  const { data: student } = await supabase.from('profiles').select('id,role,account_status')
+    .eq('id', studentId).maybeSingle()
+  if (!student || student.role !== 'STUDENT' || student.account_status !== 'ACTIVE') {
+    say('Only an active student account can be enrolled.')
+  }
+  const { data: offering } = await supabase.from('course_offerings').select('id')
+    .eq('id', offeringId).maybeSingle()
+  if (!offering) say('Choose an available course offering.')
+  const { error } = await supabase.from('enrollments').upsert(
+    { offering_id: offeringId, student_id: studentId, enrollment_status: 'ENROLLED' },
+    { onConflict: 'offering_id,student_id' },
+  )
+  if (error) say('The enrolment could not be saved. Check for an existing record and your Registrar/Admin access.')
+  revalidatePath('/dashboard')
+  say('Student enrolment saved.')
+}
+
 export async function setUserAccess(form: FormData) {
   const { supabase } = await actor(['ADMIN'])
   const userId = id(form, 'user_id')
@@ -231,7 +254,8 @@ export async function recordAttendanceSession(form: FormData) {
     ? 'A session with that date and title already exists.'
     : 'Attendance could not be saved. Confirm the session date, enrolment and course assignment.')
   revalidatePath('/dashboard')
-  say('Attendance register saved.')
+  revalidatePath('/dashboard/lecturer')
+  sayAt('/dashboard/lecturer', 'Attendance register saved.')
 }
 
 export async function saveBatchMarks(form: FormData) {
@@ -255,41 +279,39 @@ export async function saveBatchMarks(form: FormData) {
     })
   }
   const { assessments, enrollments, error } = await offeringRows(supabase, offeringId)
-  if (error) say('Could not verify assessments and enrollments for this course.')
-  const checked = validateBatchMarks(rows, assessments, enrollments.map((enrollment) => enrollment.student_id))
-  if ('error' in checked && typeof checked.error === 'string') say(checked.error)
+  if (error) sayAt('/dashboard/lecturer', 'Could not verify assessments and active enrolments for this course.')
+  const { data: sessions, error: sessionError } = await supabase.from('attendance_sessions')
+    .select('id').eq('offering_id', offeringId)
+  if (sessionError) sayAt('/dashboard/lecturer', 'Could not verify attendance eligibility.')
+  const sessionIds = (sessions ?? []).map((session) => session.id)
+  const { data: attendance, error: attendanceError } = sessionIds.length
+    ? await supabase.from('attendance_records').select('session_id,student_id,attendance_status').in('session_id', sessionIds)
+    : { data: [], error: null }
+  if (attendanceError) sayAt('/dashboard/lecturer', 'Could not verify attendance eligibility.')
+  const eligibleStudentIds = enrollments.filter((student) => {
+    if (!sessionIds.length) return false
+    const own = (attendance ?? []).filter((record) => record.student_id === student.student_id)
+    const present = own.filter((record) => record.attendance_status === 'PRESENT').length
+    return own.length === sessionIds.length && present / sessionIds.length >= 0.8
+  }).map((student) => student.student_id)
+  const checked = validateBatchMarks(
+    rows,
+    assessments,
+    enrollments.map((enrollment) => enrollment.student_id),
+    eligibleStudentIds,
+  )
+  if ('error' in checked && typeof checked.error === 'string') sayAt('/dashboard/lecturer', checked.error)
   const validatedMarks: ValidatedMark[] = isValidatedMarks(checked.data)
     ? checked.data
-    : say('The marks could not be validated. Review the batch and try again.')
-  // INSERT and UPDATE column grants intentionally differ. Use the insert-only
-  // fields for conflict-ignoring inserts, then update conflicted rows using only
-  // the update-granted fields. The database still enforces assignment/enrollment.
-  const insertPayload = validatedMarks.map(({ assessment_id, student_id, mark }) => ({
-    assessment_id, student_id, mark, entered_by: profile.id,
-  }))
-  const { data: inserted, error: insertError } = await supabase.from('marks')
-    .upsert(insertPayload, { onConflict: 'assessment_id,student_id', ignoreDuplicates: true })
-    .select('assessment_id,student_id')
-  if (insertError) say('The database did not accept the mark inserts. Verify your assignment, enrollment and mark limits.')
-  const insertedRows = inserted ?? say('The database returned no inserted-mark result. Refresh the page before trying again.')
-  const insertedKeys = new Set(insertedRows.map((mark) => mark.assessment_id + ':' + mark.student_id))
-  const rowsToUpdate = validatedMarks.filter((mark) => !insertedKeys.has(mark.assessment_id + ':' + mark.student_id))
-  for (let offset = 0; offset < rowsToUpdate.length; offset += 20) {
-    const results = await Promise.all(rowsToUpdate.slice(offset, offset + 20).map(async (mark) => {
-      const { data, error } = await supabase.from('marks')
-        .update({ mark: mark.mark, updated_by: profile.id })
-        .eq('assessment_id', mark.assessment_id)
-        .eq('student_id', mark.student_id)
-        .select('assessment_id,student_id')
-        .maybeSingle()
-      return { data, error }
-    }))
-    if (results.some((result) => result.error || !result.data)) {
-      say('Some marks could not be saved. Refresh the page to review the database state before retrying.')
-    }
-  }
+    : sayAt('/dashboard/lecturer', 'The marks could not be validated. Review the batch and try again.')
+  const { error: saveError } = await supabase.rpc('save_batch_marks', {
+    p_offering_id: offeringId,
+    p_marks: validatedMarks,
+  })
+  if (saveError) sayAt('/dashboard/lecturer', 'The database rejected the marks batch. Check the assignment, enrolment, attendance eligibility and submission state.')
   revalidatePath('/dashboard')
-  say('Batch marks saved.')
+  revalidatePath('/dashboard/lecturer')
+  sayAt('/dashboard/lecturer', 'Batch marks saved successfully.')
 }
 
 export async function submitResults(form: FormData) {
@@ -304,7 +326,8 @@ export async function submitResults(form: FormData) {
   })
   if (error) say('This course may already have a submission, or the database rejected the request.')
   revalidatePath('/dashboard')
-  say('Results submitted for review.')
+  revalidatePath('/dashboard/lecturer')
+  sayAt('/dashboard/lecturer', 'Results submitted for review.')
 }
 
 export async function resubmitResults(form: FormData) {
@@ -324,7 +347,8 @@ export async function resubmitResults(form: FormData) {
   })
   if (rpcError) say('The database did not allow this resubmission.')
   revalidatePath('/dashboard')
-  say('Corrected results have been resubmitted.')
+  revalidatePath('/dashboard/lecturer')
+  sayAt('/dashboard/lecturer', 'Corrected results have been resubmitted.')
 }
 
 export async function reviewSubmission(form: FormData) {
