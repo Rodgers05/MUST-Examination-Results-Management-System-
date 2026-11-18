@@ -4,7 +4,6 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { requireActiveProfile, type AppRole } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
-import { validateBatchMarks } from '@/lib/validation.mjs'
 
 const roles: AppRole[] = ['ADMIN', 'LECTURER', 'REVIEWER', 'REGISTRAR', 'STUDENT']
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -13,12 +12,6 @@ const value = (form: FormData, key: string) => String(form.get(key) ?? '').trim(
 const say = (message: string): never => redirect('/dashboard?notice=' + encodeURIComponent(message))
 const validId = (candidate: string) => uuidPattern.test(candidate)
 type ValidatedMark = { assessment_id: string; student_id: string; mark: number }
-
-function isValidatedMarks(candidate: unknown): candidate is ValidatedMark[] {
-  return Array.isArray(candidate) && candidate.every((item) =>
-    typeof item?.assessment_id === 'string' && typeof item?.student_id === 'string' &&
-    typeof item?.mark === 'number' && Number.isFinite(item.mark))
-}
 
 async function actor(allowed: AppRole[]) {
   const profile = await requireActiveProfile(allowed)
@@ -55,14 +48,20 @@ async function requireCompleteOffering(supabase: Awaited<ReturnType<typeof creat
   if (Math.abs(weight - 100) > 0.01) return 'Assessment weights must total 100 percent before submission.'
   if (courseworkWeight > 40.01 || examWeight > 60.01 || !exams.length) return 'MUST weighting requires coursework not to exceed 40% and end-of-semester examinations not to exceed 60%.'
   if (!(testCount >= 2 || (testCount >= 1 && assignmentCount >= 1))) return 'Coursework must include at least two tests, or one test and one assignment/take-home assessment.'
+
+  const { data: rosterData, error: rosterError } = await supabase.rpc('get_assigned_offering_student_roster', { p_offering_id: offeringId })
+  if (rosterError || !Array.isArray(rosterData)) return 'Could not verify attendance eligibility for this course.'
+  const eligibleStudents = new Set((rosterData as Array<{ student_id: string; examination_eligible: boolean }>).filter((student) => student.examination_eligible === true).map((student) => student.student_id))
+
   const { data: marks, error: marksError } = await supabase.from('marks').select('assessment_id,student_id')
     .in('assessment_id', assessments.map((assessment) => assessment.id))
   if (marksError) return 'Could not verify the assessment marks.'
   const complete = new Set((marks ?? []).map((mark) => mark.assessment_id + ':' + mark.student_id))
   for (const student of enrollments) {
     for (const assessment of assessments) {
+      if (assessment.assessment_type === 'EXAM' && !eligibleStudents.has(student.student_id)) continue
       if (!complete.has(assessment.id + ':' + student.student_id)) {
-        return 'Every enrolled student needs a mark for every assessment before results can move forward.'
+        return 'Every enrolled student needs coursework marks, and only attendance-eligible students need examination marks.'
       }
     }
   }
@@ -188,54 +187,66 @@ export async function saveBatchMarks(form: FormData) {
     .select('id,status').eq('offering_id', offeringId).maybeSingle()
   if (submissionError) say('Could not verify the current results workflow.')
   if (submission && submission.status !== 'RETURNED') say('Marks can only be changed before submission or after a reviewer returns the results.')
-  let rows: unknown
+
+  let rawRows: unknown
   const jsonRows = value(form, 'marks_json')
   if (jsonRows) {
-    try { rows = JSON.parse(jsonRows) } catch { say('Enter the mark rows in the requested JSON format.') }
+    try { rawRows = JSON.parse(jsonRows) } catch { say('The mark batch is not valid JSON.') }
   } else {
-    rows = Array.from(form.entries()).flatMap(([name, mark]) => {
+    rawRows = Array.from(form.entries()).flatMap(([name, mark]) => {
       const match = /^mark-([0-9a-f-]{36})-([0-9a-f-]{36})$/i.exec(name)
       return match && String(mark).trim() !== ''
-        ? [{ assessment_id: match[1], student_id: match[2], mark: String(mark) }]
+        ? [{ assessment_id: match[1], student_id: match[2], mark }]
         : []
     })
   }
+  if (!Array.isArray(rawRows)) say('Submit a valid list of student assessment marks.')
+
   const { assessments, enrollments, error } = await offeringRows(supabase, offeringId)
-  if (error) say('Could not verify assessments and enrollments for this course.')
-  const checked = validateBatchMarks(rows, assessments, enrollments.map((enrollment) => enrollment.student_id))
-  if ('error' in checked && typeof checked.error === 'string') say(checked.error)
-  const validatedMarks: ValidatedMark[] = isValidatedMarks(checked.data)
-    ? checked.data
-    : say('The marks could not be validated. Review the batch and try again.')
-  // INSERT and UPDATE column grants intentionally differ. Use the insert-only
-  // fields for conflict-ignoring inserts, then update conflicted rows using only
-  // the update-granted fields. The database still enforces assignment/enrollment.
-  const insertPayload = validatedMarks.map(({ assessment_id, student_id, mark }) => ({
-    assessment_id, student_id, mark, entered_by: profile.id,
-  }))
-  const { data: inserted, error: insertError } = await supabase.from('marks')
-    .upsert(insertPayload, { onConflict: 'assessment_id,student_id', ignoreDuplicates: true })
-    .select('assessment_id,student_id')
-  if (insertError) say('The database did not accept the mark inserts. Verify your assignment, enrollment and mark limits.')
-  const insertedRows = inserted ?? say('The database returned no inserted-mark result. Refresh the page before trying again.')
-  const insertedKeys = new Set(insertedRows.map((mark) => mark.assessment_id + ':' + mark.student_id))
-  const rowsToUpdate = validatedMarks.filter((mark) => !insertedKeys.has(mark.assessment_id + ':' + mark.student_id))
-  for (let offset = 0; offset < rowsToUpdate.length; offset += 20) {
-    const results = await Promise.all(rowsToUpdate.slice(offset, offset + 20).map(async (mark) => {
-      const { data, error } = await supabase.from('marks')
-        .update({ mark: mark.mark, updated_by: profile.id })
-        .eq('assessment_id', mark.assessment_id)
-        .eq('student_id', mark.student_id)
-        .select('assessment_id,student_id')
-        .maybeSingle()
-      return { data, error }
-    }))
-    if (results.some((result) => result.error || !result.data)) {
-      say('Some marks could not be saved. Refresh the page to review the database state before retrying.')
+  if (error) say('Could not verify assessments and enrolments for this course.')
+  const { data: rosterData, error: rosterError } = await supabase.rpc('get_assigned_offering_student_roster', { p_offering_id: offeringId })
+  if (rosterError || !Array.isArray(rosterData)) say('Could not verify student attendance eligibility. Refresh and try again.')
+
+  const enrolledIds = new Set(enrollments.map((student) => student.student_id))
+  const eligibleIds = new Set((rosterData as Array<{ student_id: string; examination_eligible: boolean }>)
+    .filter((student) => student.examination_eligible === true).map((student) => student.student_id))
+  const assessmentById = new Map(assessments.map((assessment) => [assessment.id, assessment]))
+  const expected = new Set<string>()
+  for (const assessment of assessments) {
+    for (const studentId of enrolledIds) {
+      if (assessment.assessment_type !== 'EXAM' || eligibleIds.has(studentId)) {
+        expected.add(assessment.id + ':' + studentId)
+      }
     }
   }
+
+  const validatedMarks: ValidatedMark[] = []
+  const seen = new Set<string>()
+  for (const raw of rawRows) {
+    if (!raw || typeof raw !== 'object') say('A mark row is malformed.')
+    const row = raw as Record<string, unknown>
+    const assessmentId = String(row.assessment_id ?? '')
+    const studentId = String(row.student_id ?? '')
+    const mark = Number(row.mark)
+    const assessment = assessmentById.get(assessmentId)
+    const key = assessmentId + ':' + studentId
+    if (!validId(assessmentId) || !validId(studentId) || !assessment || !enrolledIds.has(studentId)) say('A mark references a student or assessment outside this assigned course.')
+    if (assessment.assessment_type === 'EXAM' && !eligibleIds.has(studentId)) say('Examination marks can only be entered for students who meet the 80% attendance requirement.')
+    if (!Number.isFinite(mark) || mark < 0 || mark > Number(assessment.maximum_mark)) say('A mark is outside the allowed assessment maximum.')
+    if (!expected.has(key) || seen.has(key)) say('The batch contains a duplicate or unexpected student-assessment row.')
+    seen.add(key)
+    validatedMarks.push({ assessment_id: assessmentId, student_id: studentId, mark })
+  }
+  if (seen.size !== expected.size) say('Complete all required coursework marks and examination marks for attendance-eligible students before saving.')
+
+  const { error: saveError } = await supabase.rpc('save_batch_marks', {
+    p_offering_id: offeringId,
+    p_marks: validatedMarks,
+  })
+  if (saveError) say(saveError.message || 'The database rejected the mark batch. Check assessment and attendance rules.')
   revalidatePath('/dashboard')
-  say('Batch marks saved.')
+  revalidatePath('/dashboard/lecturer')
+  say('Batch marks saved and validated against enrolment, assessment limits and attendance eligibility.')
 }
 
 export async function submitResults(form: FormData) {
