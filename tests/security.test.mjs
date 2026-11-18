@@ -231,3 +231,20 @@ test('shared MUST presentation keeps role navigation, mobile navigation and work
   assert.match(styles, /overflow-x:auto/)
   assert.match(styles, /prefers-reduced-motion:reduce/)
 })
+
+
+test('database hardening keeps email verification independent from account approval', async () => {
+  const migration = await readFile(new URL('../database/20261118_auth_verification_hardening.sql', import.meta.url), 'utf8')
+  const auth = await readFile(new URL('../lib/auth.ts', import.meta.url), 'utf8')
+  assert.match(auth, /email_verified/)
+  assert.match(auth, /Verify%20your%20email%20address/)
+  assert.match(migration, /DROP TRIGGER IF EXISTS auto_confirm_must_signup ON auth\.users/i)
+  assert.match(migration, /account_status, email_verified[\s\S]*?'PENDING'[\s\S]*new\.email_confirmed_at IS NOT NULL/i)
+  assert.match(migration, /AFTER UPDATE OF email_confirmed_at ON auth\.users/i)
+  assert.match(migration, /p\.email_verified = true/i)
+  assert.match(migration, /SET role = p_role,[\s\S]*account_status = p_status/i)
+  assert.doesNotMatch(migration, /UPDATE auth\.users[\s\S]*email_confirmed_at\s*=/i)
+  assert.doesNotMatch(migration, /email_verified\s*=\s*\(email_verified\s+or/i)
+  assert.match(migration, /attendance_records_recorded_by_idx/)
+  assert.match(migration, /attendance_sessions_recorded_by_idx/)
+})
