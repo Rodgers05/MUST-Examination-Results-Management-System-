@@ -8,6 +8,7 @@ import {
   createCatalogueRecord,
   createSupportTicket,
   publishSubmission,
+  removeInvalidStaffAssignment,
   resubmitResults,
   reviewSubmission,
   saveBatchMarks,
@@ -273,7 +274,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               <h3>Assigned course staff</h3>
               {assignments.length ? <Table headings={['Offering', 'Staff member', 'Assignment']}>{assignments.map((assignment) => {
                 const person = profiles.find((item) => uid(item) === text(assignment, 'user_id'))
-                return <tr key={uid(assignment)}><td>{offeringText(text(assignment, 'offering_id'))}</td><td>{text(person ?? {}, 'full_name') || text(assignment, 'user_id')}</td><td>{text(assignment, 'assignment_role')}</td></tr>
+                return <tr key={uid(assignment)}><td>{offeringText(text(assignment, 'offering_id'))}</td><td>{text(person ?? {}, 'full_name') || text(assignment, 'user_id')}</td><td>{text(assignment, 'assignment_role')}<form action={removeInvalidStaffAssignment} style={{marginTop:8}}><input type="hidden" name="assignment_id" value={uid(assignment)} /><button type="submit" className="danger">Remove invalid assignment</button></form></td></tr>
               })}</Table> : <Empty>No staff are assigned yet.</Empty>}
               <h3 style={{marginTop:20}}>Enrolled students</h3>
               {enrollments.length ? <Table headings={['Offering', 'Student', 'Status']}>{enrollments.map((enrollment) => <tr key={uid(enrollment)}><td>{offeringText(text(enrollment, 'offering_id'))}</td><td>{studentName(text(enrollment, 'student_id'))}</td><td><StatusBadge value={text(enrollment, 'enrollment_status')} /></td></tr>)}</Table> : <Empty>No student enrolments are present.</Empty>}
