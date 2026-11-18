@@ -85,7 +85,7 @@ Run tests against a dedicated test environment. Do not run destructive test fixt
 4. Configure Supabase Site URL and allowed redirect URLs to include the production callback `https://must-exam-results.vercel.app/auth/callback`.
 5. Keep role assignment administrator-controlled. New self-registrations must not grant privileged roles.
 
-The application currently accepts syntactically valid email addresses from any domain, as required by the current project decision. Account activation and role assignment remain separate from email ownership verification.
+The application currently accepts syntactically valid email addresses from any domain, as required by the current project decision. **Important production caveat:** the live database still has a legacy trigger that auto-confirms MUST-domain sign-ups, and its current administrator-access RPC also confirms an email when activating an account. The email-verification hardening migration is prepared in PR #8 but has not been applied. Until that migration is reviewed and applied, do not treat administrator approval as proof of inbox ownership or claim that strict email verification is enforced.
 
 ## Database and deployment
 
@@ -102,7 +102,7 @@ Known release checks that still require completion are tracked during deployment
 
 - Verify email confirmation and SMTP delivery end to end.
 - Confirm Google OAuth provider credentials and callback behaviour.
-- Apply and validate the pending email-verification hardening migration before relying on its database-side protections.
+- Review and apply the pending email-verification hardening migration (PR #8) before relying on strict email ownership verification; confirm SMTP delivery first and plan re-verification for existing active-but-unconfirmed accounts.
 - Review the authenticated `SECURITY DEFINER` RPC warnings and test each role boundary; do not revoke workflow RPC execution blindly.
 - Perform end-to-end tests with dedicated ADMIN, LECTURER, REVIEWER, REGISTRAR and STUDENT accounts, including negative permission tests.
 - Validate marks calculations, submission state transitions, publication and student result isolation using approved test records.
