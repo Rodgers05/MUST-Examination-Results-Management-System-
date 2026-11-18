@@ -140,6 +140,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const lecturerOfferingIds = myAssignments.filter((item) => text(item, 'assignment_role') === 'LECTURER').map((item) => text(item, 'offering_id'))
   const reviewerOfferingIds = myAssignments.filter((item) => text(item, 'assignment_role') === 'REVIEWER').map((item) => text(item, 'offering_id'))
   const registrarOfferingIds = myAssignments.filter((item) => text(item, 'assignment_role') === 'REGISTRAR').map((item) => text(item, 'offering_id'))
+  const visibleOfferingIds = profile.role === 'ADMIN'
+    ? new Set(offerings.map((item) => uid(item)))
+    : profile.role === 'STUDENT'
+      ? new Set(enrollments.filter((item) => text(item, 'student_id') === profile.id && text(item, 'enrollment_status') === 'ENROLLED').map((item) => text(item, 'offering_id')))
+      : new Set(myAssignments.map((item) => text(item, 'offering_id')))
+  const visibleOfferings = offerings.filter((item) => visibleOfferingIds.has(uid(item)))
   const people = profiles.filter((item) => text(item, 'account_status') === 'ACTIVE')
   const students = people.filter((item) => text(item, 'role') === 'STUDENT')
   const studentName = (idValue: string) => {
@@ -211,16 +217,16 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           </div>
 
           <div className="grid">
-            <Card id="catalogue" title="Course and semester catalogue" note="Catalogue reads are controlled by Supabase RLS.">
-              {offerings.length ? <Table headings={['Course offering', 'Department', 'Semester', 'Academic year']}>
-                {offerings.map((offering) => {
+            <Card id="catalogue" title="My course and semester catalogue" note="Students see enrolled courses, lecturers see assigned courses, and other academic staff see their assigned offerings. Administrators can see the full catalogue.">
+              {visibleOfferings.length ? <Table headings={['Course offering', 'Department', 'Semester', 'Academic year']}>
+                {visibleOfferings.map((offering) => {
                   const course = courses.find((item) => uid(item) === text(offering, 'course_id'))
                   const semester = semesters.find((item) => uid(item) === text(offering, 'semester_id'))
                   const year = years.find((item) => uid(item) === text(semester ?? {}, 'academic_year_id'))
                   const department = departments.find((item) => uid(item) === text(course ?? {}, 'department_id'))
                   return <tr key={uid(offering)}><td><OfferingLabel offering={offering} courses={courses} semesters={semesters} /></td><td>{text(department ?? {}, 'name') || '—'}</td><td><span className="cell-primary">{text(semester ?? {}, 'name') || '—'}</span><StatusBadge value={text(semester ?? {}, 'status')} /></td><td><span className="cell-primary">{text(year ?? {}, 'label') || '—'}</span>{year && <StatusBadge value={Boolean(year.is_current)} />}</td></tr>
                 })}
-              </Table> : <Empty>No live course offerings are configured. Once the approved academic catalogue is entered, course offerings will appear here.</Empty>}
+              </Table> : <Empty>{profile.role === 'STUDENT' ? 'You are not enrolled in any active course offering yet. Contact the examinations office if this is unexpected.' : profile.role === 'LECTURER' ? 'No course offerings are assigned to your lecturer account yet. Contact the administrator.' : profile.role === 'ADMIN' ? 'No live course offerings are configured yet.' : 'No course offerings are assigned to your account yet.'}</Empty>}
             </Card>
 
             {isAdmin && <Card id="catalogue-admin" title="Academic catalogue administration" note="Enter approved MUST academic records. These records power course offerings, staff assignments, enrolments and results processing.">
