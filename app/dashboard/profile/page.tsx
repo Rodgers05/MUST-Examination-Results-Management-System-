@@ -89,6 +89,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
             <button type="submit">Save personal details</button>
           </form>
         </Card>
+        <Card title="Account session" note="Use this control to securely sign out of the portal on this device. It is available to every account role."><form action="/auth/logout" method="post"><button type="submit" className="danger">Sign out of MUST portal</button></form></Card>
         <Card title="Appearance" note="Your preference is saved to your account and follows you when you sign in on another device.">
           <form action={updateThemePreference} className="theme-preference-form">
             <div className="field"><label htmlFor="theme_preference">Theme</label><select id="theme_preference" name="theme_preference" defaultValue={profile.theme_preference ?? 'system'}><option value="light">Light</option><option value="dark">Dark</option><option value="system">Use device setting</option></select></div>
