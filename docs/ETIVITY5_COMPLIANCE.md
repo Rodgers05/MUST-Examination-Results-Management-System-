@@ -62,6 +62,26 @@ This document separates implementation evidence from demonstration evidence. A s
 - Profile column privileges were checked: authenticated users can update only permitted profile fields such as name, avatar and theme; they cannot update their own role or account status.
 - No authenticated role-by-role API test with real test accounts was completed during this audit.
 
+## Live database snapshot and security findings
+
+The linked database was checked after applying the role-scope migrations:
+
+- RLS is enabled on **17/17 public tables**; no anonymous SELECT/ALL policies were found.
+- Profile counts: 1 ADMIN, 2 REGISTRAR, 5 LECTURER, 3 REVIEWER and 7 STUDENT.
+- There are 3 current/open 2026/2027 Semester 1 offerings and 3 active enrolments.
+- Only 1 LECTURER course assignment exists; there are currently no REVIEWER or REGISTRAR course assignments.
+- There are currently 0 assessments, 0 marks, 0 result submissions and 0 published results. The live database therefore cannot yet demonstrate a complete marks-to-publication cycle.
+- All 3 currently enrolled student profiles have a blank MUST registration number. The lecturer UI displays a clear warning rather than inventing a number.
+
+Supabase advisor results after the migrations:
+
+- Security: 7 authenticated-callable SECURITY DEFINER RPC warnings. These are intentional workflow functions and have internal role/assignment/state checks; each uses an empty search path. They still require code review whenever changed.
+- Security: leaked-password protection is disabled in Supabase Auth. Enable it if the current Supabase plan/settings support it.
+- Performance: the unindexed attendance `recorded_by` foreign keys were indexed. The multiple-permissive-policy warnings were removed by splitting administrator write policies from SELECT policies. 18 low-usage/unused-index advisories remain; do not drop those indexes without workload evidence.
+- Health: no health advisor findings.
+
+The legacy Express/MySQL prototype is not safe to expose as a public production API in its current state: its CORS configuration is permissive, `GET /api/students` returns an unscoped student list to several staff roles, and result-list/detail routes do not consistently verify reviewer/approver assignment. It must remain a local demonstration only until those routes are assignment-scoped and tested. This is an additional reason not to describe it as the current live portal API.
+
 ## Required real-world evidence before release
 
 1. Capture separate authenticated test runs for ADMIN, REGISTRAR, LECTURER, REVIEWER and STUDENT, including cross-user and cross-course denial.
