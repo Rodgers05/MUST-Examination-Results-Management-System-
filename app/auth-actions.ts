@@ -101,12 +101,16 @@ export async function login(formData: FormData) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('account_status')
+    .select('account_status,email_verified')
     .eq('id', userId)
     .maybeSingle()
 
-  if (profile?.account_status === 'PENDING') redirect('/pending')
-  if (profile?.account_status !== 'ACTIVE') {
+  if (!profile || !profile.email_verified) {
+    await supabase.auth.signOut()
+    note('/login', 'Verify your email address before signing in.')
+  }
+  if (profile.account_status === 'PENDING') redirect('/pending')
+  if (profile.account_status !== 'ACTIVE') {
     await supabase.auth.signOut()
     note('/login', 'Your account is not active. Contact the administrator.')
   }
