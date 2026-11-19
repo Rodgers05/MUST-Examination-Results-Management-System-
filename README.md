@@ -16,7 +16,7 @@ The Next.js App Router application at the repository root is the primary applica
 - Email/password registration and sign-in using Supabase Auth.
 - Google OAuth sign-in button (requires the Google provider and redirect URLs to be configured in Supabase and Google Cloud).
 - Password show/hide control on password fields.
-- Administrator-controlled account roles and activation.
+- Administrator-controlled account roles. Production account activation is being hardened so it remains separate from inbox verification.
 - Role-aware workspaces for **ADMIN**, **LECTURER**, **REVIEWER**, **REGISTRAR**, and **STUDENT**.
 - Academic catalogue: departments, academic years, semesters, courses and course offerings.
 - Student enrolment and staff course assignments.
@@ -85,7 +85,7 @@ Run tests against a dedicated test environment. Do not run destructive test fixt
 4. Configure Supabase Site URL and allowed redirect URLs to include the production callback `https://must-exam-results.vercel.app/auth/callback`.
 5. Keep role assignment administrator-controlled. New self-registrations must not grant privileged roles.
 
-The application now validates registration, sign-in and confirmation-resend email addresses against the MUST institutional domains `@must.ac.ug` and `@std.must.ac.ug` in server-side code. Protected workspaces also require the profile's `email_verified` flag. **Database caveat:** the production database still has legacy email-confirmation behaviour, and the separate verification-synchronisation hardening migration has not been applied. The application gate is therefore not proof that SMTP delivery and inbox ownership have been verified end to end. Confirm SMTP delivery and review existing active-but-unverified accounts before changing Auth settings or applying that migration.
+The application validates registration, sign-in and confirmation-resend email addresses against the MUST institutional domains `@must.ac.ug` and `@std.must.ac.ug` in server-side code. Protected workspaces also require the profile's `email_verified` flag. **Critical production caveat:** the live database still has a `BEFORE INSERT` trigger that auto-confirms MUST-domain sign-ups, and `handle_new_must_user()` currently creates those profiles as ACTIVE and verified. The administrator access RPC also writes `auth.users.email_confirmed_at` and sets `profiles.email_verified` when an account is activated. Consequently, the current production flag is not reliable proof of inbox ownership, and new MUST registrations can bypass the intended administrator-approval stage. PR [#11 — Require real MUST inbox verification](https://github.com/Rodgers05/MUST-Examination-Results-Management-System-/pull/11) prepares a correction but has not been applied. Verify SMTP delivery, enable email confirmations, and review existing-account re-verification before applying it.
 
 ## Database and deployment
 
