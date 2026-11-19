@@ -85,7 +85,7 @@ Run tests against a dedicated test environment. Do not run destructive test fixt
 4. Configure Supabase Site URL and allowed redirect URLs to include the production callback `https://must-exam-results.vercel.app/auth/callback`.
 5. Keep role assignment administrator-controlled. New self-registrations must not grant privileged roles.
 
-The application currently accepts syntactically valid email addresses from any domain, as required by the current project decision. **Important production caveat:** the live database still has a legacy trigger that auto-confirms MUST-domain sign-ups, and its current administrator-access RPC also confirms an email when activating an account. The email-verification hardening migration is prepared in PR #8 but has not been applied. Until that migration is reviewed and applied, do not treat administrator approval as proof of inbox ownership or claim that strict email verification is enforced.
+The application now validates registration, sign-in and confirmation-resend email addresses against the MUST institutional domains `@must.ac.ug` and `@std.must.ac.ug` in server-side code. Protected workspaces also require the profile's `email_verified` flag. **Database caveat:** the production database still has legacy email-confirmation behaviour, and the separate verification-synchronisation hardening migration has not been applied. The application gate is therefore not proof that SMTP delivery and inbox ownership have been verified end to end. Confirm SMTP delivery and review existing active-but-unverified accounts before changing Auth settings or applying that migration.
 
 ## Database and deployment
 
@@ -115,50 +115,48 @@ Supabase leaked-password protection may require a higher subscription tier. Wher
 The previous Express/MySQL implementation and its scripts are retained only as a reference. It is not the live Next.js/Supabase application. Do not use legacy demo credentials or seed data in the production system.
 
 
-## Release verification (2026-11-20)
+## Release verification (2026-11-19)
 
-### Automated CI and production build
+### First application release
 
-The application code on `main` at commit `4a403c7a70ddf89c12c4041f1b59f74b18e4366c` passed the GitHub Actions quality workflow:
+PR [#10 — Simplify MUST portal wording](https://github.com/Rodgers05/MUST-Examination-Results-Management-System-/pull/10) was merged to `main` as commit `786317eaabeed752a337b22af2c5c43bbae3db32`.
 
-- `npm ci`
-- `npm audit --audit-level=high`
-- `npm run lint`
-- `npm run typecheck`
-- `npm test`
-- `npm run build`
+The source commit passed the GitHub Actions quality workflow, including dependency advisory check, lint, TypeScript type-check, automated tests and production build. Both linked Vercel projects completed production deployments for that merge commit:
 
-The matching Vercel deployment for project `must-exam-results` reached **READY** with target **production** and the same repository, branch and commit.
+- `must-exam-results`: deployment `dpl_utgfdoX9nxj8MjWfvCPLbY7EKaH4`, state **READY**, production.
+- `mustexaminationresultsmanagementsystem`: deployment `dpl_DHWgoaVcpAhAUMvaUW5G8RtqVox9`, state **READY**, production.
 
-### Production routing caveat
+The `must-exam-results.vercel.app` alias now resolves to the new production deployment, but it still has a 307 redirect to `must-results.is-a.dev`. Vercel reports that custom domain as **not verified** and supplies a pending TXT verification challenge. Therefore deployment promotion is confirmed, but end-user access through that redirect is not yet fully verified. The other project's stable Vercel domain is `https://mustexaminationresultsmanagementsys.vercel.app`.
 
-The configured URL `https://must-exam-results.vercel.app` currently returns a Vercel 307 redirect to `https://must-results.is-a.dev`. Vercel reports the redirect target as **unverified**. Verify that domain's DNS ownership or remove the redirect before treating the configured URL as fully operational. The production deployment itself is READY; direct page-content verification was not available from this environment.
+### What this release changes
 
-### Read-only Supabase checks
+- Simplifies wording across the public pages, dashboard, navigation, profile and lecturer marks workspace.
+- Restricts server-side email validation to `@must.ac.ug` and `@std.must.ac.ug`.
+- Requires the profile email-verification flag before protected workspace access.
+- Keeps role assignment administrator-controlled and does not modify academic records or marks calculations.
 
-The connected production database was inspected without changing schema or data:
+### Read-only production database snapshot
 
-- All **17** existing public application tables have RLS enabled.
-- No direct table privileges are granted to `anon` on those existing application tables.
-- The inspected `SECURITY DEFINER` workflow functions use an empty `search_path`; no `anon` execute grants were found.
-- Role-claim RLS checks confirmed that an enrolled student sees only their own profile, enrollment and offering; a student account with a mismatched lecturer assignment does not gain lecturer offering or marks access; an unassigned lecturer and reviewer see no course workflow data; and registrar/admin visibility follows their configured policies.
-- Vercel's runtime-error aggregation returned no error clusters in the preceding 24 hours.
+The following counts were read from the connected Supabase project after this release. No database writes were performed:
 
-### Production data readiness and outstanding controls
+- 18 profiles; 4 ACTIVE profiles still have `email_verified = false`.
+- 4 course offerings and 5 enrolments in `ENROLLED` status.
+- 1 course-staff assignment; the current role-mismatch check returned no mismatches.
+- 1 assessment and 2 mark records.
+- 0 result submissions and 0 published results.
+- 0 attendance sessions and 0 attendance records.
 
-The live academic data currently contains **4 course offerings**, **3 active enrolments**, and **1 staff assignment**. That assignment is a role mismatch: a STUDENT profile is assigned as LECTURER. There are currently **0 assessments, 0 marks, 0 result submissions and 0 published results**. Consequently, the full marks-to-review-to-approval-to-publication workflow cannot yet be exercised end to end. No staff were assigned and no academic records were invented or inserted during this release.
+All 17 existing public application tables have RLS enabled. The database advisor currently reports 8 authenticated-callable `SECURITY DEFINER` functions and disabled leaked-password protection. These require a function-by-function authorization review; do not revoke execution blindly because the application uses protected RPCs for core workflows. The performance advisor also reports 17 unused indexes, which should be reviewed after real query workloads exist. The health advisor returned no findings.
 
-Read-only account checks found **4 ACTIVE profiles** whose Supabase Auth email remains unconfirmed (1 lecturer and 3 students). The current login action rejects unconfirmed email addresses. PR [#8 — Harden MUST email verification and database access controls](https://github.com/Rodgers05/MUST-Examination-Results-Management-System-/pull/8) remains an open draft; its migration `database/20261118_auth_verification_hardening.sql` has **not** been applied. Do not treat administrator activation as proof of inbox ownership until the migration and email-delivery process have been reviewed and approved.
+### Remaining release and institutional acceptance work
 
-The `supabase_admin` default privileges for future objects in `public` still grant broad table, sequence and function privileges to `anon` and `authenticated`. Existing tables were checked separately and are RLS-protected, but future public objects created by `supabase_admin` need a reviewed default-privilege hardening migration before they are relied on.
+1. Verify the `must-results.is-a.dev` DNS/TXT challenge or deliberately change the primary URL routing so the verified Vercel URL does not depend on an unverified redirect.
+2. Verify real SMTP confirmation and password-reset delivery, Google OAuth credentials and callback behaviour. Do not assume that the Google button proves OAuth is configured.
+3. Review the legacy Auth confirmation trigger and administrator-access RPC; plan the verification migration only after SMTP and existing-account impact are confirmed.
+4. Review the 8 callable `SECURITY DEFINER` functions individually, including internal role, assignment and workflow-state checks. Review leaked-password protection availability and future-object default privileges.
+5. Complete non-production end-to-end testing for ADMIN, REGISTRAR, LECTURER, REVIEWER and STUDENT, including role isolation, enrolled-student marks entry, logout on mobile, assessment weighting, attendance eligibility, result return/review/approval/publication and student result isolation.
+6. The current production dataset has no result submissions, published results or attendance sessions/records, so a complete academic lifecycle and the 80% attendance rule have not been validated against real workflows.
+7. Confirm the required MUST approval chain (Department Committee, Faculty Board, Senate and Academic Registrar) with the university's actual regulations and authorised stakeholders before treating the workflow as institutionally complete.
+8. Verify backup/restore, audit retention, monitoring and formal university sign-off before real institutional use.
 
-### Remaining production acceptance work
-
-1. Verify or remove the redirect from `must-exam-results.vercel.app` to the unverified custom domain.
-2. Review and explicitly approve the email-verification hardening migration after confirming SMTP delivery and the impact on existing accounts.
-3. Correct the role-mismatched staff assignment using verified institutional records; do not guess the intended lecturer.
-4. Complete official course-staff assignments and assessment/attendance setup, then test marks entry, reviewer return, registrar approval, publication and student result isolation using dedicated non-production accounts and approved fixtures.
-5. Review the `supabase_admin` default ACLs for future public tables, sequences and functions.
-6. Verify Google OAuth, SMTP delivery, backup/restore, monitoring and institutional sign-off.
-
-No Supabase migration, account-status change, staff assignment, mark, result or other academic data write was performed during this release audit.
+No production academic record, mark, result, role assignment, Auth setting or database schema was changed as part of this application-code release.
