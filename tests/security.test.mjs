@@ -237,3 +237,12 @@ test('shared MUST presentation keeps role navigation, mobile navigation and work
   assert.match(styles, /overflow-x:auto/)
   assert.match(styles, /prefers-reduced-motion:reduce/)
 })
+
+
+test('protected workspaces require inbox verification independently of account activation', async () => {
+  const auth = await readFile(new URL('../lib/auth.ts', import.meta.url), 'utf8')
+  assert.match(auth, /email_verified: boolean/)
+  assert.match(auth, /account_status,email_verified/)
+  assert.match(auth, /if \(!profile\.email_verified\)/)
+  assert.match(auth, /Verify%20your%20email%20address%20before%20accessing%20the%20portal/)
+})
