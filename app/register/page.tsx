@@ -9,7 +9,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
     <><PortalHeader nav /><main className="auth-wrap">
       <section className="auth-art"><div className="auth-brand-note">MUST RESULTS PORTAL</div><div><div className="kicker">STUDENT REGISTRATION</div><h1>Create your student account.</h1><p>Your account will be reviewed before you can sign in. Staff accounts are created by an administrator.</p></div><a href="https://www.must.ac.ug/" target="_blank" rel="noreferrer">Visit MUST website ↗</a></section>
       <section className="auth-card-wrap"><div className="auth-card">
-        <div className="kicker">REGISTER</div><h1>Register as a student</h1><p className="muted">Use an email address you can access.</p>
+        <div className="kicker">REGISTER</div><h1>Register as a student</h1><p className="muted">Use your MUST institutional email address.</p>
         {notice && <div className="notice error">{notice}</div>}
         <form action={register}>
           <div className="field"><label htmlFor="full_name">Full name</label><input id="full_name" name="full_name" autoComplete="name" minLength={2} maxLength={120} required /></div>
