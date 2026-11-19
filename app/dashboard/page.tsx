@@ -262,7 +262,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 <div className="stat"><strong>{missingStaffNumbers.length}</strong><span>Staff missing staff numbers</span></div>
                 <div className="stat"><strong>{assignmentMismatches.length}</strong><span>Course assignment / account role mismatches</span></div>
               </div>
-              {assignmentMismatches.length > 0 && <div className="notice error" role="alert"><strong>Review required:</strong> Some course staff assignments do not match the account's approved role. Review these assignments before granting access to academic workflows.
+              {assignmentMismatches.length > 0 && <div className="notice error" role="alert"><strong>Review required:</strong> Some course staff assignments do not match the account&apos;s approved role. Review these assignments before granting access to academic workflows.
                 <Table headings={['Account', 'Approved account role', 'Course assignment role', 'Offering']}>
                   {assignmentMismatches.map((assignment) => {
                     const person = profiles.find((item) => uid(item) === text(assignment, 'user_id'))

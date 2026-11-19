@@ -172,11 +172,11 @@ export async function removeInvalidStaffAssignment(form: FormData) {
   if (!validId(assignmentId)) say('Choose a valid staff assignment.')
   const { data: assignment, error: assignmentError } = await supabase.from('course_staff')
     .select('id,user_id,assignment_role').eq('id', assignmentId).maybeSingle()
-  if (assignmentError || !assignment) say('The staff assignment could not be found.')
+  if (assignmentError || !assignment) return say('The staff assignment could not be found.')
   const { data: assignedProfile, error: profileError } = await supabase.from('profiles')
     .select('role').eq('id', assignment.user_id).maybeSingle()
-  if (profileError || !assignedProfile) say('The account linked to this assignment could not be verified.')
-  if (assignedProfile.role === assignment.assignment_role) say('This assignment matches the account role and cannot be removed through the mismatch cleanup.')
+  if (profileError || !assignedProfile) return say('The account linked to this assignment could not be verified.')
+  if (assignedProfile.role === assignment.assignment_role) return say('This assignment matches the account role and cannot be removed through the mismatch cleanup.')
   const { error } = await supabase.from('course_staff').delete().eq('id', assignmentId)
   if (error) say('The invalid staff assignment could not be removed. Check administrator permissions.')
   revalidatePath('/dashboard')
@@ -229,7 +229,8 @@ export async function saveBatchMarks(form: FormData) {
         : []
     })
   }
-  if (!Array.isArray(rawRows)) say('Submit a valid list of student assessment marks.')
+  if (!Array.isArray(rawRows)) return say('Submit a valid list of student assessment marks.')
+  const markRows = rawRows as unknown[]
 
   const { assessments, enrollments, error } = await offeringRows(supabase, offeringId)
   if (error) say('Could not verify assessments and enrolments for this course.')
@@ -251,7 +252,7 @@ export async function saveBatchMarks(form: FormData) {
 
   const validatedMarks: ValidatedMark[] = []
   const seen = new Set<string>()
-  for (const raw of rawRows) {
+  for (const raw of markRows) {
     if (!raw || typeof raw !== 'object') say('A mark row is malformed.')
     const row = raw as Record<string, unknown>
     const assessmentId = String(row.assessment_id ?? '')
@@ -259,7 +260,7 @@ export async function saveBatchMarks(form: FormData) {
     const mark = Number(row.mark)
     const assessment = assessmentById.get(assessmentId)
     const key = assessmentId + ':' + studentId
-    if (!validId(assessmentId) || !validId(studentId) || !assessment || !enrolledIds.has(studentId)) say('A mark references a student or assessment outside this assigned course.')
+    if (!validId(assessmentId) || !validId(studentId) || !assessment || !enrolledIds.has(studentId)) return say('A mark references a student or assessment outside this assigned course.')
     if (assessment.assessment_type === 'EXAM' && !eligibleIds.has(studentId)) say('Examination marks can only be entered for students who meet the 80% attendance requirement.')
     if (!Number.isFinite(mark) || mark < 0 || mark > Number(assessment.maximum_mark)) say('A mark is outside the allowed assessment maximum.')
     if (!expected.has(key) || seen.has(key)) say('The batch contains a duplicate or unexpected student-assessment row.')

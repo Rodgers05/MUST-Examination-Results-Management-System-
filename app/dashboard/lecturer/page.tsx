@@ -22,7 +22,6 @@ export default async function LecturerMarksPage({ searchParams }: { searchParams
   ])
   const offerings = rows(offeringResult.data)
   const assessments = rows(assessmentResult.data)
-  const enrollments = rows(enrollmentResult.data)
   const submissions = rows(submissionResult.data)
   const rosterResponses = await Promise.all(offeringIds.map(async (offeringId) => {
     const response = await supabase.rpc('get_assigned_offering_student_roster', { p_offering_id: offeringId })
