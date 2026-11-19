@@ -247,3 +247,22 @@ test('protected workspaces require inbox verification independently of account a
   assert.match(auth, /if \(!profile\.email_verified\)/)
   assert.match(auth, /Verify%20your%20email%20address%20before%20accessing%20the%20portal/)
 })
+
+
+test('inbox verification cannot be granted by administrator activation', async () => {
+  const migration = await readFile(new URL('../database/20261120_require_real_email_verification.sql', import.meta.url), 'utf8')
+  const callback = await readFile(new URL('../app/auth/callback/route.ts', import.meta.url), 'utf8')
+  const authActions = await readFile(new URL('../app/auth-actions.ts', import.meta.url), 'utf8')
+  assert.match(migration, /DROP TRIGGER IF EXISTS auto_confirm_must_signup ON auth\.users/)
+  assert.match(migration, /NEW\.email_confirmed_at IS NOT NULL/)
+  assert.match(migration, /account_status, email_verified[\s\S]*?'PENDING'[\s\S]*?NEW\.email_confirmed_at IS NOT NULL/)
+  assert.match(migration, /CREATE TRIGGER sync_profile_email_verification/)
+  assert.doesNotMatch(migration, /UPDATE auth\.users[\s\S]*?email_confirmed_at\s*=\s*coalesce/)
+  assert.doesNotMatch(migration, /email_verified\s*=\s*\(email_verified or p_status = 'ACTIVE'\)/)
+  assert.match(migration, /Administrator approval controls account status and role only/)
+  assert.match(callback, /isValidEmail\(user\.email\)/)
+  assert.match(callback, /select\('account_status,email_verified'\)/)
+  assert.match(callback, /profile\?\.email_verified/)
+  assert.match(authActions, /select\('account_status,email_verified'\)/)
+  assert.match(authActions, /!profile\.email_verified/)
+})
