@@ -62,7 +62,7 @@ export function PortalHeader({ nav = false }: { nav?: boolean }) {
 }
 
 export function PortalFooter() {
-  return <footer className="site-footer"><strong>Mbarara University of Science and Technology</strong><span>Examination Results Management System · Secure academic services</span><a href="https://www.must.ac.ug/" target="_blank" rel="noopener noreferrer">Official university website</a></footer>
+  return <footer className="site-footer"><strong>Mbarara University of Science and Technology</strong><span>Examination Results Portal</span><a href="https://www.must.ac.ug/" target="_blank" rel="noopener noreferrer">Official university website</a></footer>
 }
 
 export function DashboardFrame({ profile, children }: { profile: Profile; children: ReactNode }) {
@@ -73,20 +73,20 @@ export function DashboardFrame({ profile, children }: { profile: Profile; childr
     : null
   return <div className="dashboard-shell" data-theme={profile.theme_preference ?? 'system'}>
     <aside className="sidebar">
-      <MustBrand subtitle="Examination Services" />
+      <MustBrand subtitle="Results Portal" />
       <div className="side-label">{profile.role} WORKSPACE</div>
       <nav className="side-nav" aria-label="Workspace navigation">
         <WorkspaceLinks profile={profile} />
       </nav>
       <div className="sidebar-bottom">
-        <div className="help-card"><strong>Need assistance?</strong><p>Contact your examinations coordinator for account and workflow support.</p><a href="https://www.must.ac.ug/" target="_blank" rel="noopener noreferrer">Visit MUST website →</a></div>
-        <div className="sidebar-user">{avatarUrl && <img className="sidebar-avatar" src={avatarUrl} alt=""/>}<span>{profile.institutional_email}</span><small>{profile.role}</small><StatusBadge value={profile.account_status} /><Link href="/dashboard/profile">Manage profile →</Link></div>
+        <div className="help-card"><strong>Need help?</strong><p>Contact the examinations office for help.</p><a href="https://www.must.ac.ug/" target="_blank" rel="noopener noreferrer">MUST website →</a></div>
+        <div className="sidebar-user">{avatarUrl && <img className="sidebar-avatar" src={avatarUrl} alt=""/>}<span>{profile.institutional_email}</span><small>{profile.role}</small><StatusBadge value={profile.account_status} /><Link href="/dashboard/profile">My profile →</Link></div>
         <form action="/auth/logout" method="post"><button className="button secondary signout" type="submit">Sign out</button></form>
       </div>
     </aside>
     <div className="dashboard-main">
-      <header className="topbar"><div className="mobile-brand"><MustBrand subtitle="Examination Services" /></div><div className="topbar-title"><span className="crumb">MUST / {profile.role} workspace</span><strong>Examination Results Management System</strong></div><div className="userbar"><Link href="/dashboard/profile" className="userbar-profile" aria-label="Open my profile">{avatarUrl ? <img className="avatar avatar-image" src={avatarUrl} alt=""/> : <span className="avatar" aria-hidden="true">{initials}</span>}<span className="user-meta"><strong>{displayName}</strong><small>{profile.role}</small><StatusBadge value={profile.account_status} /></span></Link></div></header>
-      <div className="mobile-nav"><details><summary>Workspace menu</summary><nav aria-label="Mobile workspace navigation"><WorkspaceLinks profile={profile} /><form action="/auth/logout" method="post" className="mobile-signout"><button type="submit" className="button secondary">Sign out</button></form></nav></details></div>
+      <header className="topbar"><div className="mobile-brand"><MustBrand subtitle="Results Portal" /></div><div className="topbar-title"><span className="crumb">MUST / {profile.role} workspace</span><strong>Examination Results Management System</strong></div><div className="userbar"><Link href="/dashboard/profile" className="userbar-profile" aria-label="Open my profile">{avatarUrl ? <img className="avatar avatar-image" src={avatarUrl} alt=""/> : <span className="avatar" aria-hidden="true">{initials}</span>}<span className="user-meta"><strong>{displayName}</strong><small>{profile.role}</small><StatusBadge value={profile.account_status} /></span></Link></div></header>
+      <div className="mobile-nav"><details><summary>Menu</summary><nav aria-label="Mobile workspace navigation"><WorkspaceLinks profile={profile} /><form action="/auth/logout" method="post" className="mobile-signout"><button type="submit" className="button secondary">Sign out</button></form></nav></details></div>
       {children}
       <PortalFooter />
     </div>
@@ -97,7 +97,7 @@ export function Card({ id, title, note, children }: { id?: string; title: string
   return <section className="card" id={id}><div className="card-head"><div><h2>{title}</h2>{note && <p className="subtle">{note}</p>}</div></div>{children}</section>
 }
 
-export function Empty({ children = 'No records are available for this account yet.' }: { children?: ReactNode }) { return <div className="empty">{children}</div> }
+export function Empty({ children = 'No records found.' }: { children?: ReactNode }) { return <div className="empty">{children}</div> }
 
 export function DataTable({ headings, children }: { headings: string[]; children: ReactNode }) {
   return <div className="table-wrap" role="region" aria-label={`${headings.join(', ')} table`} tabIndex={0}><table><thead><tr>{headings.map((heading) => <th key={heading} scope="col">{heading}</th>)}</tr></thead><tbody>{children}</tbody></table></div>

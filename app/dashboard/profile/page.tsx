@@ -62,11 +62,11 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
 
   return <DashboardFrame profile={profile}>
     <main className="content">
-      <section className="welcome"><div><div className="kicker">PERSONAL ACCOUNT</div><h1>My profile</h1><p>Manage your personal details, appearance and account information.</p></div><span className="tag">PRIVATE PROFILE</span></section>
+      <section className="welcome"><div><div className="kicker">MY ACCOUNT</div><h1>My profile</h1><p>Update your details and preferences.</p></div><span className="tag">PRIVATE PROFILE</span></section>
       {notice && <div className="notice" role="status">{notice}</div>}
       {pageHasError && <div className="notice error" role="alert">Some personal records could not be loaded. Refresh the page or contact support.</div>}
       <div className="grid">
-        <Card title="Profile picture" note="Use a clear JPG, PNG or WebP image up to 2 MB.">
+        <Card title="Profile picture" note="JPG, PNG or WebP. Maximum size: 2 MB.">
           <div className="profile-photo-layout">
             {avatarUrl ? <img className="profile-photo" src={avatarUrl} alt="Your profile" /> : <div className="profile-photo profile-photo-placeholder">{profile.full_name.trim().split(/\s+/).map((part) => part[0]).slice(0,2).join('').toUpperCase()}</div>}
             <form action={uploadProfileAvatar} className="profile-upload-form">
@@ -75,7 +75,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
             </form>
           </div>
         </Card>
-        <Card title="Personal information" note="Your email and institutional role are managed by the examinations administrator.">
+        <Card title="Personal information" note="Your email and role can only be changed by an administrator.">
           <form action={updatePersonalProfile}>
             <div className="field"><label htmlFor="full_name">Display name</label><input id="full_name" name="full_name" defaultValue={profile.full_name} minLength={2} maxLength={120} required /></div>
             <div className="field"><label>Email address</label><input value={profile.institutional_email} disabled readOnly /></div>
@@ -86,25 +86,25 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
               {profile.staff_number && <div className="field"><label>Staff number</label><input value={profile.staff_number} disabled readOnly /></div>}
               <div className="field"><label>Faculty / department</label><input value={departmentResponse.data?.name ?? 'Not assigned'} disabled readOnly /></div>
             </div>
-            <button type="submit">Save personal details</button>
+            <button type="submit">Save changes</button>
           </form>
         </Card>
-        <Card title="Account session" note="Use this control to securely sign out of the portal on this device. It is available to every account role."><form action="/auth/logout" method="post"><button type="submit" className="danger">Sign out of MUST portal</button></form></Card>
-        <Card title="Appearance" note="Your preference is saved to your account and follows you when you sign in on another device.">
+        <Card title="Sign out" note="Sign out of this device."><form action="/auth/logout" method="post"><button type="submit" className="danger">Sign out</button></form></Card>
+        <Card title="Appearance" note="Choose how the portal looks.">
           <form action={updateThemePreference} className="theme-preference-form">
             <div className="field"><label htmlFor="theme_preference">Theme</label><select id="theme_preference" name="theme_preference" defaultValue={profile.theme_preference ?? 'system'}><option value="light">Light</option><option value="dark">Dark</option><option value="system">Use device setting</option></select></div>
             <button type="submit">Save appearance</button>
           </form>
-          <p className="subtle">The portal keeps MUST navy and gold accents across all appearance modes.</p>
+          <p className="subtle">MUST colours stay the same.</p>
         </Card>
-        {isStudent ? <Card title="My academic record" note="Only results officially published for your student account are displayed.">
+        {isStudent ? <Card title="My academic record" note="Your published results.">
           {results.length ? <DataTable headings={['Course', 'Coursework / 40', 'Exam / 60', 'Total', 'Grade', 'Published']}>
             {results.map((item) => <tr key={value(item, 'id')}><td>{offeringLabel(value(item, 'offering_id'))}</td><td>{value(item, 'coursework_mark') || '—'}</td><td>{value(item, 'exam_mark') || '—'}</td><td><strong>{value(item, 'total_mark')}</strong></td><td><StatusBadge value={value(item, 'grade')} /></td><td>{labelDate(item.published_at)}</td></tr>)}
-          </DataTable> : <Empty>No published academic results are available for your account yet. Results appear here after official publication.</Empty>}
-        </Card> : <Card title="My assigned academic work" note="These are the course offerings currently assigned to your staff account.">
+          </DataTable> : <Empty>No results have been published yet.</Empty>}
+        </Card> : <Card title="My assigned academic work" note="Courses assigned to you.">
           {assignments.length ? <DataTable headings={['Course offering', 'Assignment role']}>
             {assignments.map((item, index) => <tr key={value(item, 'offering_id') + index}><td>{offeringLabel(value(item, 'offering_id'))}</td><td>{value(item, 'assignment_role')}</td></tr>)}
-          </DataTable> : <Empty>No course offerings are currently assigned to your account.</Empty>}
+          </DataTable> : <Empty>No courses have been assigned to you yet.</Empty>}
         </Card>}
       </div>
     </main>

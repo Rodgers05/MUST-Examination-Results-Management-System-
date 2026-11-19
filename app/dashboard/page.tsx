@@ -214,11 +214,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   return (
     <DashboardFrame profile={profile}>
         <main className="content" id="overview">
-          <section className="welcome"><div><div className="kicker">{profile.role} WORKSPACE</div><h1>Welcome, {displayName.split(' ')[0]}.</h1><p>Role-based examination services for Mbarara University of Science and Technology.</p></div><span className="tag">SECURE SESSION</span></section>
+          <section className="welcome"><div><div className="kicker">{profile.role} WORKSPACE</div><h1>Welcome, {displayName.split(' ')[0]}.</h1><p>Manage your courses, marks and results here.</p></div><span className="tag">SIGNED IN</span></section>
           {noticeText}
-          {dashboardHasQueryErrors && <div className="notice error" role="alert">Some workspace information could not be loaded. Empty sections may be incomplete; refresh the page or contact support if the issue continues.</div>}
+          {dashboardHasQueryErrors && <div className="notice error" role="alert">Some information did not load. Refresh the page or contact support.</div>}
           {isAdmin && offerings.length === 0 && <section className="setup-panel" aria-label="Initial system setup">
-            <div><span className="setup-eyebrow">INITIAL CONFIGURATION</span><h2>Prepare the academic catalogue</h2><p>No live course offerings are configured yet. Add the approved academic year, departments, courses and semester details to begin using results workflows.</p></div>
+            <div><span className="setup-eyebrow">SETUP</span><h2>Set up academic records</h2><p>Add the approved academic year, departments, courses and semester before creating course offerings.</p></div>
             <a className="button" href="#catalogue-admin">Configure catalogue</a>
           </section>}
           <div className="stats" aria-label={`${profile.role.toLowerCase()} dashboard summary`}>
@@ -238,10 +238,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                   const department = departments.find((item) => uid(item) === text(course ?? {}, 'department_id'))
                   return <tr key={uid(offering)}><td><OfferingLabel offering={offering} courses={courses} semesters={semesters} /></td><td>{text(department ?? {}, 'name') || '—'}</td><td><span className="cell-primary">{text(semester ?? {}, 'name') || '—'}</span><StatusBadge value={text(semester ?? {}, 'status')} /></td><td><span className="cell-primary">{text(year ?? {}, 'label') || '—'}</span>{year && <StatusBadge value={Boolean(year.is_current)} />}</td></tr>
                 })}
-              </Table> : <Empty>{profile.role === 'STUDENT' ? 'You are not enrolled in any active course offering yet. Contact the examinations office if this is unexpected.' : profile.role === 'LECTURER' ? 'No course offerings are assigned to your lecturer account yet. Contact the administrator.' : profile.role === 'ADMIN' ? 'No live course offerings are configured yet.' : 'No course offerings are assigned to your account yet.'}</Empty>}
+              </Table> : <Empty>{profile.role === 'STUDENT' ? 'You are not enrolled in a course yet. Contact the examinations office if this is wrong.' : profile.role === 'LECTURER' ? 'No courses are assigned to you yet. Contact the administrator.' : profile.role === 'ADMIN' ? 'No courses have been set up yet.' : 'No courses are assigned to your account yet.'}</Empty>}
             </Card>
 
-            {isAdmin && <Card id="catalogue-admin" title="Academic catalogue administration" note="Enter approved MUST academic records. These records power course offerings, staff assignments, enrolments and results processing.">
+            {isAdmin && <Card id="catalogue-admin" title="Manage academic records" note="Add academic years, departments, courses and semesters here.">
               <div className="grid">
                 <form action={createCatalogueRecord} className="card half"><input type="hidden" name="kind" value="department" /><h3>Department</h3><div className="field"><label>Code</label><input name="code" required maxLength={20} /></div><div className="field"><label>Name</label><input name="name" required maxLength={120} /></div><button>Save department</button></form>
                 <form action={createCatalogueRecord} className="card half"><input type="hidden" name="kind" value="academic_year" /><h3>Academic year</h3><div className="field"><label>Label</label><input name="label" placeholder="YYYY/YYYY" required /></div><div className="form-grid"><div className="field"><label>Starts</label><input type="date" name="starts_on" required /></div><div className="field"><label>Ends</label><input type="date" name="ends_on" required /></div></div><button>Save year</button></form>
@@ -255,14 +255,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
             {isAdmin && <Card id="account-quality" title="Account data quality review" note="Use official MUST records when completing identifiers. Do not invent student or staff numbers.">
               <div className="stats">
-                <div className="stat"><strong>{validLecturerAssignments.length}</strong><span>Valid lecturer course assignments</span></div>
+                <div className="stat"><strong>{validLecturerAssignments.length}</strong><span>Lecturers assigned</span></div>
                 <div className="stat"><strong>{offeringsWithoutAssessments.length}</strong><span>Offerings without assessment setup</span></div>
                 <div className="stat"><strong>{enrollments.filter((item) => text(item, 'enrollment_status') === 'ENROLLED').length}</strong><span>Active enrolments</span></div>
                 <div className="stat"><strong>{missingStudentNumbers.length}</strong><span>Students missing registration numbers</span></div>
                 <div className="stat"><strong>{missingStaffNumbers.length}</strong><span>Staff missing staff numbers</span></div>
-                <div className="stat"><strong>{assignmentMismatches.length}</strong><span>Course assignment / account role mismatches</span></div>
+                <div className="stat"><strong>{assignmentMismatches.length}</strong><span>Incorrect staff assignments</span></div>
               </div>
-              {assignmentMismatches.length > 0 && <div className="notice error" role="alert"><strong>Review required:</strong> Some course staff assignments do not match the account&apos;s approved role. Review these assignments before granting access to academic workflows.
+              {assignmentMismatches.length > 0 && <div className="notice error" role="alert"><strong>Check these assignments:</strong> Some course staff assignments do not match the account&apos;s approved role. Review these assignments before granting access to academic workflows.
                 <Table headings={['Account', 'Approved account role', 'Course assignment role', 'Offering']}>
                   {assignmentMismatches.map((assignment) => {
                     const person = profiles.find((item) => uid(item) === text(assignment, 'user_id'))
@@ -275,10 +275,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             </Card>}
 
             {isAdmin && <Card id="access" title="Account access administration" note="New users always arrive as pending students. Use this panel only after verifying a person's institutional status.">
-              {profiles.length ? <Table headings={['User', 'Current access', 'Set access']}>{profiles.map((user) => <tr key={uid(user)}><td>{text(user, 'full_name')}<br /><small>{text(user, 'institutional_email')}</small></td><td><span className="cell-primary">{text(user, 'role')}</span><StatusBadge value={text(user, 'account_status')} /></td><td><form action={setUserAccess} className="form-grid"><input type="hidden" name="user_id" value={uid(user)} /><select aria-label="Role" name="role" defaultValue={text(user, 'role')}>{['STUDENT', 'LECTURER', 'REVIEWER', 'REGISTRAR', 'ADMIN'].map((role) => <option key={role}>{role}</option>)}</select><select aria-label="Status" name="account_status" defaultValue={text(user, 'account_status')}>{['PENDING', 'ACTIVE', 'SUSPENDED'].map((item) => <option key={item}>{item}</option>)}</select><input name="student_number" aria-label="Official student registration number" defaultValue={text(user, 'student_number')} placeholder="Student registration no." maxLength={40} /><input name="staff_number" aria-label="Official staff number" defaultValue={text(user, 'staff_number')} placeholder="Staff number" maxLength={40} /><button>Save access and identifiers</button></form></td></tr>)}</Table> : <Empty>No user profiles yet.</Empty>}
+              {profiles.length ? <Table headings={['User', 'Current access', 'Set access']}>{profiles.map((user) => <tr key={uid(user)}><td>{text(user, 'full_name')}<br /><small>{text(user, 'institutional_email')}</small></td><td><span className="cell-primary">{text(user, 'role')}</span><StatusBadge value={text(user, 'account_status')} /></td><td><form action={setUserAccess} className="form-grid"><input type="hidden" name="user_id" value={uid(user)} /><select aria-label="Role" name="role" defaultValue={text(user, 'role')}>{['STUDENT', 'LECTURER', 'REVIEWER', 'REGISTRAR', 'ADMIN'].map((role) => <option key={role}>{role}</option>)}</select><select aria-label="Status" name="account_status" defaultValue={text(user, 'account_status')}>{['PENDING', 'ACTIVE', 'SUSPENDED'].map((item) => <option key={item}>{item}</option>)}</select><input name="student_number" aria-label="Student registration number" defaultValue={text(user, 'student_number')} placeholder="Student registration no." maxLength={40} /><input name="staff_number" aria-label="Official staff number" defaultValue={text(user, 'staff_number')} placeholder="Staff number" maxLength={40} /><button>Save changes</button></form></td></tr>)}</Table> : <Empty>No user profiles yet.</Empty>}
             </Card>}
 
-            {isAdmin && <Card title="Staff assignments and enrolments" note="Review course access and enrolled accounts before lecturers enter marks.">
+            {isAdmin && <Card title="Course staff and enrolments" note="Check course assignments and student enrolments.">
               <h3>Assigned course staff</h3>
               {assignments.length ? <Table headings={['Offering', 'Staff member', 'Assignment']}>{assignments.map((assignment) => {
                 const person = profiles.find((item) => uid(item) === text(assignment, 'user_id'))
@@ -293,13 +293,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               {assessments.filter((item) => lecturerOfferingIds.includes(text(item, 'offering_id'))).length > 0 && <Table headings={['Offering', 'Assessment', 'Maximum', 'Weight']}>{assessments.filter((item) => lecturerOfferingIds.includes(text(item, 'offering_id'))).map((item) => <tr key={uid(item)}><td>{offeringText(text(item, 'offering_id'))}</td><td>{text(item, 'title')}</td><td>{text(item, 'maximum_mark')}</td><td>{text(item, 'weight')}%</td></tr>)}</Table>}
             </Card>}
 
-            {profile.role === 'LECTURER' && <Card id="marks" title="Batch mark entry" note="One row per enrolled student and assessment. Enter marks within each assessment maximum; RLS and the server validate the offering assignment. Student identifiers are shown because current RLS does not expose other students’ profile names to lecturers.">
+            {profile.role === 'LECTURER' && <Card id="marks" title="Batch mark entry" note="Enter marks for students enrolled in your course. Marks are checked before they are saved.">
               {lecturerOfferingIds.map((offeringId) => {
                 const offerAssessments = assessments.filter((item) => text(item, 'offering_id') === offeringId)
                 const offerStudents = enrollments.filter((item) => text(item, 'offering_id') === offeringId && text(item, 'enrollment_status') === 'ENROLLED')
                 const submission = submissions.find((item) => text(item, 'offering_id') === offeringId)
                 const existing = new Map(marks.map((item) => [text(item, 'assessment_id') + ':' + text(item, 'student_id'), text(item, 'mark')]))
-                if (!offerAssessments.length || !offerStudents.length) return <div className="notice" key={offeringId}>{offeringText(offeringId)} needs assessments and enrolled students before mark entry.</div>
+                if (!offerAssessments.length || !offerStudents.length) return <div className="notice" key={offeringId}>{offeringText(offeringId)} needs assessments and enrolled students before you can enter marks.</div>
                 return <div key={offeringId} style={{marginTop:20}}><h3><OfferingLabel offering={currentOffering(offeringId) ?? {}} courses={courses} semesters={semesters} /> {submission && <>{status(text(submission, 'status'))}</>}</h3>
                   {submission && text(submission, 'status') === 'RETURNED' && text(submission, 'reviewer_note') && <div className="notice error" role="status"><strong>Reviewer comments:</strong> {text(submission, 'reviewer_note')}</div>}
                   <form action={saveBatchMarks}>
@@ -313,14 +313,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                     {(!submission || text(submission, 'status') === 'RETURNED') && <div className="actions"><button type="submit">Save batch marks</button></div>}
                   </form>
                   {submission && text(submission, 'status') !== 'RETURNED' && <div className="notice">Marks are locked while this submission is under review, approved or published.</div>}
-                  {!submission && <form action={submitResults} className="form-grid" style={{marginTop:12}}><input type="hidden" name="offering_id" value={offeringId} /><div className="field"><label>Lecturer note (optional)</label><input name="lecturer_note" maxLength={500} /></div><button>Submit complete results</button></form>}
-                  {submission && text(submission, 'status') === 'RETURNED' && <form action={resubmitResults} className="form-grid" style={{marginTop:12}}><input type="hidden" name="submission_id" value={uid(submission)} /><div className="field"><label>Correction note</label><input name="lecturer_note" maxLength={500} required /></div><button>Resubmit corrected results</button></form>}
+                  {!submission && <form action={submitResults} className="form-grid" style={{marginTop:12}}><input type="hidden" name="offering_id" value={offeringId} /><div className="field"><label>Note (optional)</label><input name="lecturer_note" maxLength={500} /></div><button>Submit marks</button></form>}
+                  {submission && text(submission, 'status') === 'RETURNED' && <form action={resubmitResults} className="form-grid" style={{marginTop:12}}><input type="hidden" name="submission_id" value={uid(submission)} /><div className="field"><label>Reason for correction</label><input name="lecturer_note" maxLength={500} required /></div><button>Resubmit marks</button></form>}
                 </div>
               })}
               {!lecturerOfferingIds.length && <Empty>No lecturer offerings are assigned to your account.</Empty>}
             </Card>}
 
-            {(profile.role === 'REVIEWER' || profile.role === 'REGISTRAR' || isAdmin) && <Card id="workflow" title={profile.role === 'REVIEWER' ? 'Reviewer queue' : profile.role === 'REGISTRAR' ? 'Registrar workflow' : 'Submission overview'} note="Actions are checked against your profile and course assignment, then authorized again by the database.">
+            {(profile.role === 'REVIEWER' || profile.role === 'REGISTRAR' || isAdmin) && <Card id="workflow" title={profile.role === 'REVIEWER' ? 'Reviewer queue' : profile.role === 'REGISTRAR' ? 'Registrar workflow' : 'Submission overview'} note="Only assigned staff can take these actions.">
               {submissions.length ? <Table headings={['Offering', 'Status', 'Submitted', 'Lecturer note', 'Reviewer comments', 'Action']}>
                 {submissions.filter((item) => isAdmin ||
                   (profile.role === 'REVIEWER' && reviewerOfferingIds.includes(text(item, 'offering_id'))) ||
@@ -344,7 +344,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                       <input type="hidden" name="submission_id" value={uid(submission)} /><div className="field"><label>Review comment</label><input name="comments" maxLength={1000} placeholder="Required to return" /></div><div className="actions"><button name="action" value="REVIEWED">Review</button><button className="danger" name="action" value="RETURNED">Return</button></div>
                     </form>}
                     {profile.role === 'REGISTRAR' && text(submission, 'status') === 'UNDER_REVIEW' && <form action={approveSubmission}><input type="hidden" name="submission_id" value={uid(submission)} /><div className="field"><label>Registrar note</label><input name="comments" maxLength={1000} /></div><button>Approve results</button></form>}
-                    {profile.role === 'REGISTRAR' && text(submission, 'status') === 'APPROVED' && <form action={publishSubmission}><input type="hidden" name="submission_id" value={uid(submission)} /><p className="subtle">Publishing calculates the official weighted totals and grades in PostgreSQL.</p><button>Publish results</button></form>}
+                    {profile.role === 'REGISTRAR' && text(submission, 'status') === 'APPROVED' && <form action={publishSubmission}><input type="hidden" name="submission_id" value={uid(submission)} /><p className="subtle">The system calculates final marks and grades when results are published.</p><button>Publish results</button></form>}
                     {isAdmin && <small>Workflow action by the assigned reviewer or registrar.</small>}
                     </td>
                   </tr>
@@ -353,11 +353,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               {reviewActions.rows.length > 0 && <div style={{marginTop:18}}><h3>Recent review actions</h3><Table headings={['Action', 'Comments', 'Date']}>{reviewActions.rows.map((item) => <tr key={uid(item)}><td><StatusBadge value={text(item, 'action')} /></td><td>{text(item, 'comments') || '—'}</td><td>{date(item.created_at)}</td></tr>)}</Table></div>}
             </Card>}
 
-            {profile.role === 'STUDENT' && <Card id="results" title="Published results" note="Only records published for your own authenticated profile are queried.">
+            {profile.role === 'STUDENT' && <Card id="results" title="Published results" note="These are your published results.">
               {publishedResult.rows.length ? <Table headings={['Course offering', 'Coursework /40', 'Exam /60', 'Total /100', 'Grade', 'Grade point', 'Status', 'Published']}>{publishedResult.rows.map((item) => <tr key={uid(item)}><td>{offeringText(text(item, 'offering_id'))}</td><td>{text(item, 'coursework_mark') || '—'}</td><td>{text(item, 'exam_mark') || '—'}</td><td>{text(item, 'total_mark')}</td><td><strong>{text(item, 'grade')}</strong></td><td>{text(item, 'grade_value') || '—'}</td><td><StatusBadge value={text(item, 'publication_status')} /></td><td>{date(item.published_at)}</td></tr>)}</Table> : <Empty>No published results are available for your account.</Empty>}
             </Card>}
 
-            {['ADMIN', 'REGISTRAR', 'REVIEWER'].includes(profile.role) && <Card id="reports" title="Published results report" note="Official totals and grades are read from the database publication table.">
+            {['ADMIN', 'REGISTRAR', 'REVIEWER'].includes(profile.role) && <Card id="reports" title="Published results report" note="Published totals and grades.">
               {publishedResult.rows.length ? <Table headings={['Offering', 'Student', 'Coursework /40', 'Exam /60', 'Total /100', 'Grade', 'Grade point', 'Status', 'Published']}>{publishedResult.rows.map((item) => <tr key={uid(item)}><td>{offeringText(text(item, 'offering_id'))}</td><td>{studentName(text(item, 'student_id'))}</td><td>{text(item, 'coursework_mark') || '—'}</td><td>{text(item, 'exam_mark') || '—'}</td><td>{text(item, 'total_mark')}</td><td>{text(item, 'grade')}</td><td>{text(item, 'grade_value') || '—'}</td><td><StatusBadge value={text(item, 'publication_status')} /></td><td>{date(item.published_at)}</td></tr>)}</Table> : <Empty>No published results are available.</Empty>}
             </Card>}
 
@@ -365,8 +365,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               {auditResult.rows.length ? <Table headings={['Date', 'Action', 'Record', 'Details']}>{auditResult.rows.map((item) => <tr key={uid(item)}><td>{date(item.created_at)}</td><td>{text(item, 'action')}</td><td>{text(item, 'entity_type')} {text(item, 'entity_id')}</td><td><code>{JSON.stringify(item.details ?? {})}</code></td></tr>)}</Table> : <Empty>No audit records are available.</Empty>}
             </Card>}
 
-            <Card id="support" title="Help and support" note="Your ticket is visible to you and the administrator.">
-              <form action={createSupportTicket} className="form-grid"><div className="field"><label>Subject</label><input name="subject" minLength={4} maxLength={160} required /></div><div className="field"><label>Message</label><textarea name="message" minLength={10} maxLength={4000} required /></div><button>Send support request</button></form>
+            <Card id="support" title="Help and support" note="You and the administrator can see your request.">
+              <form action={createSupportTicket} className="form-grid"><div className="field"><label>Subject</label><input name="subject" minLength={4} maxLength={160} required /></div><div className="field"><label>Message</label><textarea name="message" minLength={10} maxLength={4000} required /></div><button>Send request</button></form>
               {ticketsResult.rows.length ? <Table headings={['Subject', 'Message', 'Status', 'Created']}>{ticketsResult.rows.map((ticket) => <tr key={uid(ticket)}><td>{text(ticket, 'subject')}</td><td>{text(ticket, 'message')}</td><td>{status(text(ticket, 'status'))}</td><td>{date(ticket.created_at)}</td></tr>)}</Table> : <Empty>No support requests yet.</Empty>}
             </Card>
           </div>
