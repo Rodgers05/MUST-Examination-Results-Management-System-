@@ -33,11 +33,11 @@ test('status badges use explicit status mappings and keep unknown values neutral
   assert.deepEqual(getStatusAppearance(null), { label: 'Unknown', tone: 'neutral' })
 })
 
-test('email validation accepts any normal email domain and rejects malformed addresses', () => {
-  for (const email of ['person@must.ac.ug', 'person@std.must.ac.ug', 'PERSON@MUST.AC.UG', 'person@gmail.com', 'person@outlook.com', 'person@yahoo.co.uk']) {
+test('email validation only accepts MUST institutional email domains', () => {
+  for (const email of ['person@must.ac.ug', 'person@std.must.ac.ug', 'PERSON@MUST.AC.UG', 'STUDENT@STD.MUST.AC.UG']) {
     assert.equal(isValidEmail(email), true, email)
   }
-  for (const email of ['', 'person', 'person@', '@gmail.com', 'person gmail@gmail.com', 'person@gmail', 'a'.repeat(250) + '@gmail.com']) {
+  for (const email of ['', 'person', 'person@', '@must.ac.ug', 'person gmail@gmail.com', 'person@gmail', 'person@gmail.com', 'person@outlook.com', 'person@yahoo.co.uk', 'a'.repeat(250) + '@must.ac.ug']) {
     assert.equal(isValidEmail(email), false, email)
   }
 })
@@ -154,7 +154,7 @@ test('server contract uses verified claims, role gates, email verification and G
   assert.match(actions, /submission\.status !== 'APPROVED'/)
   assert.match(loginPage, /Continue with Google/)
   assert.match(loginPage, /Email address/)
-  assert.match(registerPage, /Use any valid email address/)
+  assert.match(registerPage, /Use your MUST institutional email address/)
   assert.doesNotMatch(loginPage + registerPage, /institutional email|MUST email|Only @must\.ac\.ug/)
 })
 
@@ -226,7 +226,7 @@ test('shared MUST presentation keeps role navigation, mobile navigation and work
   assert.match(authPage, /PortalHeader nav/)
   assert.match(loading, /aria-busy="true"/)
   assert.match(errorPage, /role="alert"/)
-  assert.match(dashboard, /Some workspace information could not be loaded/)
+  assert.match(dashboard, /Some information did not load/)
   assert.match(dashboard, /dashboardStats/)
   assert.match(dashboard, /publication_status/)
   assert.match(dashboard, /enrollment_status/)
