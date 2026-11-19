@@ -50,22 +50,22 @@ export default async function LecturerMarksPage({ searchParams }: { searchParams
 
   return <DashboardFrame profile={profile}>
     <main className="content">
-      <section className="welcome"><div><div className="kicker">LECTURER WORKSPACE</div><h1>Marks and assessment entry</h1><p>Manage coursework, end-of-semester examinations and results for your assigned courses.</p></div><span className="tag">ASSIGNED COURSES ONLY</span></section>
+      <section className="welcome"><div><div className="kicker">LECTURER WORKSPACE</div><h1>Marks and assessment entry</h1><p>Enter marks and manage results for your assigned courses.</p></div><span className="tag">MY COURSES</span></section>
       {notice && <div className="notice" role="status">{notice}</div>}
-      {hasError && <div className="notice error" role="alert">Some course information could not be loaded. Refresh the page or contact support.</div>}
-      <section className="notice"><strong>MUST assessment rules:</strong> Coursework contributes up to 40 marks and the end-of-semester examination up to 60 marks. Coursework must include at least two tests, or one test and one assignment/take-home assessment. Publish coursework marks at least two weeks before examinations. A minimum 80% attendance is required to qualify for university examinations.</section>
-      <Card title="Assessment setup" note="Create the coursework components and one end-of-semester examination for each assigned course. Weights must total 100% before submission.">
+      {hasError && <div className="notice error" role="alert">Some course details did not load. Refresh the page.</div>}
+      <section className="notice"><strong>Assessment rules:</strong> Coursework is out of 40 marks and the final exam is out of 60. Include at least two tests, or one test and one assignment. Publish coursework marks at least two weeks before exams. Students need at least 80% attendance to sit the exam.</section>
+      <Card title="Assessment setup" note="Add coursework and one final exam for each course. All assessment weights must add up to 100%.">
         <form action={createAssessment} className="form-grid">
           <div className="field"><label>Assigned course</label><select name="offering_id" required defaultValue=""><option value="" disabled>Select course offering</option>{offerings.map((item) => <option key={id(item)} value={id(item)}>{offeringLabel(item)}</option>)}</select></div>
           <div className="field"><label>Assessment title</label><input name="title" required maxLength={120} placeholder="e.g. Mid-semester test / Assignment 1" /></div>
-          <div className="field"><label>Assessment category</label><select name="assessment_type"><option value="TEST">Coursework — Test</option><option value="COURSEWORK">Coursework — Assignment / take-home</option><option value="PRACTICAL">Coursework — Practical</option><option value="EXAM">End-of-semester examination</option></select></div>
-          <div className="field"><label>Maximum raw mark</label><input type="number" name="maximum_mark" min="1" max="100" step="0.01" required /></div>
-          <div className="field"><label>Contribution to final mark (%)</label><input type="number" name="weight" min="0.01" max="60" step="0.01" required /></div>
+          <div className="field"><label>Type</label><select name="assessment_type"><option value="TEST">Coursework — Test</option><option value="COURSEWORK">Coursework — Assignment / take-home</option><option value="PRACTICAL">Coursework — Practical</option><option value="EXAM">End-of-semester examination</option></select></div>
+          <div className="field"><label>Maximum mark</label><input type="number" name="maximum_mark" min="1" max="100" step="0.01" required /></div>
+          <div className="field"><label>Weight (%)</label><input type="number" name="weight" min="0.01" max="60" step="0.01" required /></div>
           <button type="submit">Add assessment</button>
         </form>
-        {assessments.length ? <DataTable headings={['Course offering','Assessment','Category','Raw maximum','Final contribution']}>{assessments.map((item) => <tr key={id(item)}><td>{offeringLabel(offerings.find((offer) => id(offer) === value(item, 'offering_id')) ?? {})}</td><td>{value(item, 'title')}</td><td>{value(item, 'assessment_type')}</td><td>{value(item, 'maximum_mark')}</td><td>{value(item, 'weight')}%</td></tr>)}</DataTable> : <Empty>No assessments have been configured for your assigned courses.</Empty>}
+        {assessments.length ? <DataTable headings={['Course offering','Assessment','Category','Raw maximum','Final contribution']}>{assessments.map((item) => <tr key={id(item)}><td>{offeringLabel(offerings.find((offer) => id(offer) === value(item, 'offering_id')) ?? {})}</td><td>{value(item, 'title')}</td><td>{value(item, 'assessment_type')}</td><td>{value(item, 'maximum_mark')}</td><td>{value(item, 'weight')}%</td></tr>)}</DataTable> : <Empty>No assessments have been added yet.</Empty>}
       </Card>
-      <Card title="Enter coursework and examination marks" note="Only enrolled students in your assigned course offerings are displayed. Marks are validated against each assessment's maximum raw mark.">
+      <Card title="Enter coursework and examination marks" note="Only students enrolled in your courses appear here. Each mark must be within the assessment maximum.">
         {offerings.length ? offerings.map((offering) => {
           const offeringId = id(offering)
           const courseAssessments = assessments.filter((item) => value(item, 'offering_id') === offeringId)
@@ -79,14 +79,14 @@ export default async function LecturerMarksPage({ searchParams }: { searchParams
             <h3>{offeringLabel(offering)}</h3>
             <p className="subtle">Coursework: {courseworkWeight}% / 40% maximum · Examination: {examWeight}% / 60% maximum · Total configured: {totalWeight}%</p>
             {submission && <p><StatusBadge value={value(submission, 'status')} /></p>}
-            {submission && value(submission, 'status') === 'RETURNED' && <div className="notice error"><strong>Reviewer feedback:</strong> {value(submission, 'reviewer_note') || 'Review the returned marks and correct them.'}</div>}
+            {submission && value(submission, 'status') === 'RETURNED' && <div className="notice error"><strong>Reviewer comment:</strong> {value(submission, 'reviewer_note') || 'Review the returned marks and correct them.'}</div>}
             {!courseAssessments.length || !students.length ? <Empty>Add assessments and enrol students before entering marks.</Empty> : <form action={saveBatchMarks}>
               <input type="hidden" name="offering_id" value={offeringId} />
               <DataTable headings={['Student name', 'Registration number', 'Attendance', ...courseAssessments.map((item) => value(item, 'title') + ' (' + value(item, 'maximum_mark') + ')')]}>
                 {students.map((student) => <tr key={value(student, 'student_id')}>
-                  <td><strong>{value(student, 'full_name') || 'Name not recorded'}</strong><small className="subtle" style={{display:'block'}}>{value(student, 'institutional_email')}</small></td>
-                  <td><code>{value(student, 'student_number') || 'Not recorded'}</code></td>
-                  <td>{value(student, 'attendance_percentage') ? value(student, 'attendance_percentage') + '%' : 'Not recorded'}<small className="subtle" style={{display:'block'}}>{student.examination_eligible ? 'Exam eligible' : 'Exam eligibility not confirmed'}</small></td>
+                  <td><strong>{value(student, 'full_name') || 'Name not available'}</strong><small className="subtle" style={{display:'block'}}>{value(student, 'institutional_email')}</small></td>
+                  <td><code>{value(student, 'student_number') || 'Not available'}</code></td>
+                  <td>{value(student, 'attendance_percentage') ? value(student, 'attendance_percentage') + '%' : 'Not available'}<small className="subtle" style={{display:'block'}}>{student.examination_eligible ? 'Can sit exam' : 'Attendance not confirmed'}</small></td>
                   {courseAssessments.map((assessment) => <td key={id(assessment)}>{value(assessment, 'assessment_type') === 'EXAM' && student.examination_eligible !== true ? <span className="subtle">Not eligible</span> : <input aria-label={value(assessment, 'title') + ' mark for ' + value(student, 'student_number')} type="number" min="0" max={value(assessment, 'maximum_mark')} step="0.01" name={'mark-' + id(assessment) + '-' + value(student, 'student_id')} defaultValue={existing.get(id(assessment) + ':' + value(student, 'student_id')) ?? ''} disabled={Boolean(submission && value(submission, 'status') !== 'RETURNED')} />}</td>)}
                 </tr>)}
               </DataTable>
