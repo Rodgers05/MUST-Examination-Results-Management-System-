@@ -6,15 +6,15 @@ export default async function ForgotPasswordPage({ searchParams }: { searchParam
   const { notice } = await searchParams
   return (
     <><PortalHeader nav /><main className="auth-wrap">
-      <section className="auth-art"><div className="auth-brand-note">MUST ACCOUNT SECURITY</div><div><div className="kicker">PASSWORD RECOVERY</div><h1>Get back to your academic workspace.</h1><p>We will send a secure password-reset link to the email address associated with your account.</p></div><a href="https://www.must.ac.ug/" target="_blank" rel="noreferrer">Visit MUST website ↗</a></section>
+      <section className="auth-art"><div className="auth-brand-note">MUST RESULTS PORTAL</div><div><div className="kicker">RESET PASSWORD</div><h1>Reset your password.</h1><p>Enter your email to get a password reset link.</p></div><a href="https://www.must.ac.ug/" target="_blank" rel="noreferrer">Visit MUST website ↗</a></section>
       <section className="auth-card-wrap"><div className="auth-card">
-        <div className="kicker">ACCOUNT RECOVERY</div><h1>Forgot password?</h1><p className="muted">Enter your registered email address. If an account exists, a recovery link will be sent to it.</p>
+        <div className="kicker">RESET PASSWORD</div><h1>Forgot password?</h1><p className="muted">Enter your account email. If it is registered, we will send a reset link.</p>
         {notice && <div className="notice" role="status">{notice}</div>}
         <form action={requestPasswordReset}>
           <div className="field"><label htmlFor="email">Email address</label><input id="email" name="email" type="email" autoComplete="email" required /></div>
-          <button type="submit">Send recovery link</button>
+          <button type="submit">Send reset link</button>
         </form>
-        <p className="auth-foot"><Link href="/login">Return to sign in</Link></p>
+        <p className="auth-foot"><Link href="/login">Back to sign in</Link></p>
       </div></section>
     </main><PortalFooter /></>
   )
