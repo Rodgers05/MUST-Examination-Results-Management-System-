@@ -11,8 +11,8 @@ export default async function PendingPage() {
 
   return (
     <><PortalHeader nav /><main className="auth-wrap">
-      <section className="auth-art"><div className="auth-brand-note">MUST EXAMINATION SERVICES</div><div><div className="kicker">ACCOUNT REVIEW</div><h1>Your request is with the university team.</h1><p>New accounts start with student access waiting for approval. No privileged role is assigned during registration.</p></div><a href="https://www.must.ac.ug/" target="_blank" rel="noreferrer">Visit MUST website ↗</a></section>
-      <section className="auth-card-wrap"><div className="auth-card"><StatusBadge value={profile.account_status} /><h1>Waiting for approval</h1><p>New accounts receive student access after administrator approval. Verify your institutional email to complete registration.</p><p className="subtle">Signed in as {profile.institutional_email}</p><form action={logout}><button className="secondary" type="submit">Sign out</button></form></div></section>
+      <section className="auth-art"><div className="auth-brand-note">MUST RESULTS PORTAL</div><div><div className="kicker">ACCOUNT APPROVAL</div><h1>Your account is waiting for approval.</h1><p>New accounts need administrator approval. Your role is set by an administrator.</p></div><a href="https://www.must.ac.ug/" target="_blank" rel="noreferrer">Visit MUST website ↗</a></section>
+      <section className="auth-card-wrap"><div className="auth-card"><StatusBadge value={profile.account_status} /><h1>Waiting for approval</h1><p>Verify your email and wait for administrator approval.</p><p className="subtle">Signed in as {profile.institutional_email}</p><form action={logout}><button className="secondary" type="submit">Sign out</button></form></div></section>
     </main><PortalFooter /></>
   )
 }
