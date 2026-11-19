@@ -39,7 +39,7 @@ export async function register(formData: FormData) {
   const email = String(formData.get('email') ?? '').trim().toLowerCase()
   const password = String(formData.get('password') ?? '')
   if (fullName.length < 2 || fullName.length > 120) note('/register', 'Enter your name (2–120 characters).')
-  if (!isValidEmail(email)) note('/register', 'Enter a valid email address.')
+  if (!isValidEmail(email)) note('/register', 'Enter your MUST institutional email address.')
   if (!isValidPassword(password)) note('/register', 'Use 12 or more characters, with uppercase and lowercase letters and a number.')
 
   const supabase = await createClient()
@@ -138,7 +138,7 @@ export async function logout() {
 
 export async function resendSignupConfirmation(formData: FormData) {
   const email = String(formData.get('email') ?? '').trim().toLowerCase()
-  if (!isValidEmail(email)) note('/register', 'Enter a valid email address.')
+  if (!isValidEmail(email)) note('/register', 'Enter your MUST institutional email address.')
 
   const supabase = await createClient()
   const origin = await getAuthOrigin()
