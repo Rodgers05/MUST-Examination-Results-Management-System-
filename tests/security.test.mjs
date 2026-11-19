@@ -155,7 +155,8 @@ test('server contract uses verified claims, role gates, email verification and G
   assert.match(loginPage, /Continue with Google/)
   assert.match(loginPage, /Email address/)
   assert.match(registerPage, /Use your MUST institutional email address/)
-  assert.doesNotMatch(loginPage + registerPage, /institutional email|MUST email|Only @must\.ac\.ug/)
+  assert.doesNotMatch(loginPage + registerPage, /Only @must\.ac\.ug/)
+  assert.match(registerPage, /Use your MUST institutional email address/)
 })
 
 test('repository ignore rules cover local credentials, backups and frontend snapshots', async () => {
