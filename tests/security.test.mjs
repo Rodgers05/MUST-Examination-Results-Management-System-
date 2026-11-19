@@ -144,7 +144,11 @@ test('server contract uses verified claims, role gates, email verification and G
     assert.match(actions, new RegExp(rpc))
   }
   assert.match(dashboard, /\.eq\('student_id', profile\.id\)/)
-  assert.match(actions, /validateBatchMarks/)
+  assert.match(actions, /assessmentById\.get\(assessmentId\)/)
+  assert.match(actions, /enrolledIds\.has\(studentId\)/)
+  assert.match(actions, /eligibleIds\.has\(studentId\)/)
+  assert.match(actions, /Number\(assessment\.maximum_mark\)/)
+  assert.match(actions, /save_batch_marks/)
   assert.match(actions, /account_status !== 'ACTIVE'/)
   assert.match(actions, /submission\.status !== 'UNDER_REVIEW'/)
   assert.match(actions, /submission\.status !== 'APPROVED'/)
@@ -178,9 +182,11 @@ test('hardened write permissions are respected by dashboard actions', async () =
     readFile(new URL('../app/dashboard/actions.ts', import.meta.url), 'utf8'),
     readFile(new URL('../app/dashboard/page.tsx', import.meta.url), 'utf8'),
   ])
-  assert.match(actions, /\.upsert\(insertPayload, \{ onConflict: 'assessment_id,student_id', ignoreDuplicates: true \}\)/)
-  assert.match(actions, /assessment_id, student_id, mark, entered_by: profile\.id/)
-  assert.match(actions, /\.update\(\{ mark: mark\.mark, updated_by: profile\.id \}\)/)
+  assert.match(actions, /supabase\.rpc\('save_batch_marks', \{\s*p_offering_id: offeringId,\s*p_marks: validatedMarks,\s*\}\)/)
+  assert.match(actions, /const validatedMarks: ValidatedMark\[\]/)
+  assert.match(actions, /assessmentById\.get\(assessmentId\)/)
+  assert.match(actions, /enrolledIds\.has\(studentId\)/)
+  assert.doesNotMatch(actions, /\.from\('marks'\)\.(?:insert|upsert|update)\(/)
   assert.doesNotMatch(actions, /\.from\('audit_logs'\)\.insert/)
   assert.doesNotMatch(actions, /\.from\('support_tickets'\)\.update/)
   assert.match(actions, /\.from\('support_tickets'\)\.insert\(\{ created_by: profile\.id, subject, message \}\)/)
