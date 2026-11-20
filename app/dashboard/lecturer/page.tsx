@@ -2,7 +2,7 @@ import { requireActiveProfile } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { Card, DashboardFrame, DataTable, Empty } from '@/app/components/portal-ui'
 import { LecturerMarksWorkspace } from '@/app/components/lecturer-marks-workspace'
-import { createAssessment } from '../actions'
+import { createAssessment, updateAssessment } from '../actions'
 
 type Row = Record<string, unknown>
 const rows = (value: unknown): Row[] => Array.isArray(value) ? value as Row[] : []
@@ -72,9 +72,30 @@ export default async function LecturerMarksPage({ searchParams }: { searchParams
           <div className="field"><label>Weight (%)</label><input type="number" name="weight" min="0.01" max="60" step="0.01" required /></div>
           <button type="submit">Add assessment</button>
         </form>
-        {assessments.length ? <DataTable headings={['Course offering','Assessment','Category','Raw maximum','Final contribution']}>{assessments.map((item) => {
+        {assessments.length ? <DataTable headings={['Course offering','Assessment title','Category','Maximum mark','Weight','Edit assessment']}>{assessments.map((item) => {
           const offering = offerings.find((offer) => id(offer) === value(item, 'offering_id'))
-          return <tr key={id(item)}><td>{offering ? offeringLabel(offering) : 'Course offering'}</td><td>{value(item, 'title')}</td><td>{value(item, 'assessment_type')}</td><td>{value(item, 'maximum_mark')}</td><td>{value(item, 'weight')}%</td></tr>
+          const locked = submissions.some((submission) => value(submission, 'offering_id') === value(item, 'offering_id') && value(submission, 'status') !== 'RETURNED')
+          return <tr key={id(item)}>
+            <td>{offering ? offeringLabel(offering) : 'Course offering'}</td>
+            <td>{value(item, 'title')}</td>
+            <td>{value(item, 'assessment_type')}</td>
+            <td>{value(item, 'maximum_mark')}</td>
+            <td>{value(item, 'weight')}%</td>
+            <td>
+              <details>
+                <summary>{locked ? 'View locked' : 'Edit'}</summary>
+                <form action={updateAssessment} className="form-grid" style={{minWidth:240,marginTop:10}}>
+                  <input type="hidden" name="assessment_id" value={id(item)} />
+                  <input type="hidden" name="offering_id" value={value(item, 'offering_id')} />
+                  <div className="field"><label>Assessment title</label><input name="title" defaultValue={value(item, 'title')} maxLength={120} required disabled={locked}/></div>
+                  <div className="field"><label>Assessment category</label><select name="assessment_type" defaultValue={value(item, 'assessment_type')} disabled={locked}><option value="TEST">Coursework — Test</option><option value="COURSEWORK">Coursework — Assignment / take-home</option><option value="PRACTICAL">Coursework — Practical</option><option value="EXAM">End-of-semester examination</option></select></div>
+                  <div className="field"><label>Maximum mark</label><input type="number" name="maximum_mark" defaultValue={value(item, 'maximum_mark')} min="0.01" max="100" step="0.01" required disabled={locked}/></div>
+                  <div className="field"><label>Weight (%)</label><input type="number" name="weight" defaultValue={value(item, 'weight')} min="0.01" max="100" step="0.01" required disabled={locked}/></div>
+                  {locked ? <p className="subtle">Locked because this course is already in the review workflow.</p> : <button type="submit">Save assessment changes</button>}
+                </form>
+              </details>
+            </td>
+          </tr>
         })}</DataTable> : <Empty>No assessments have been added yet.</Empty>}
       </Card>
       <LecturerMarksWorkspace
