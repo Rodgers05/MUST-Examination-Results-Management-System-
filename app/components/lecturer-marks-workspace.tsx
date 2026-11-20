@@ -38,28 +38,39 @@ export function LecturerMarksWorkspace({
           {offerings.map((offering) => <button key={offering.id} type="button" className={selectedOffering === offering.id ? 'course-picker-option active' : 'course-picker-option'} aria-pressed={selectedOffering === offering.id} onClick={() => setSelectedOffering(offering.id)}>{offering.label}</button>)}
         </div>
       </div>
-      {!selected ? <div className="notice" role="status">Select or tap a course above to load its marks-entry table. No course is preselected.</div> : <>
-        <div className="selected-course-heading"><div><span className="kicker">SELECTED COURSE</span><h3>{selected.label}</h3></div><span className="tag">{selectedStudents.length} enrolled</span></div>
-        <p className="subtle">Coursework: {courseworkWeight}% / 40% maximum · Examination: {examWeight}% / 60% maximum · Total configured: {totalWeight}%</p>
-        {submission && <p><StatusBadge value={submission.status} /></p>}
-        {submission?.status === 'RETURNED' && <div className="notice error"><strong>Reviewer comment:</strong> {submission.reviewer_note || 'Review the returned marks and correct them.'}</div>}
-        {selectedAssessments.length === 0 || selectedStudents.length === 0 ? <Empty>{selectedAssessments.length === 0 ? 'No assessments have been configured for this course yet.' : 'There are no actively enrolled students in this course.'}</Empty> : <>
-          <form action={saveBatchMarks} key={selectedOffering + ':marks'}>
-            <input type="hidden" name="offering_id" value={selectedOffering} />
-            <DataTable headings={['Student name', 'Registration number', 'Enrolment status', ...selectedAssessments.map((item) => item.title + ' (' + item.maximum_mark + ')')]}>
-              {selectedStudents.map((student) => <tr key={student.student_id}>
-                <td><strong>{student.full_name || 'Name not available'}</strong><small className="subtle" style={{display:'block'}}>{student.institutional_email}</small></td>
-                <td><code>{student.student_number || 'Not available'}</code></td>
-                <td><strong>Enrolled</strong><small className="subtle" style={{display:'block'}}>Eligible for all marks</small></td>
-                {selectedAssessments.map((assessment) => <td key={assessment.id}><input aria-label={assessment.title + ' mark for ' + (student.student_number || student.full_name)} type="number" min="0" max={assessment.maximum_mark} step="0.01" name={'mark-' + assessment.id + '-' + student.student_id} defaultValue={existing.get(assessment.id + ':' + student.student_id) ?? ''} disabled={Boolean(submission && submission.status !== 'RETURNED')} /></td>)}
-              </tr>)}
-            </DataTable>
-            {(!submission || submission.status === 'RETURNED') && <div className="actions"><button type="submit">Save marks for {selected.label.split(' · ')[0]}</button></div>}
-          </form>
-          {!submission && <form action={submitResults} className="form-grid" style={{marginTop:16}}><input type="hidden" name="offering_id" value={selectedOffering}/><div className="field"><label>Submission note (optional)</label><input name="lecturer_note" maxLength={500}/></div><button type="submit">Submit results for departmental review</button></form>}
-          {submission?.status === 'RETURNED' && <form action={resubmitResults} className="form-grid" style={{marginTop:16}}><input type="hidden" name="submission_id" value={submission.id}/><div className="field"><label>Correction note</label><input name="lecturer_note" maxLength={500} required/></div><button type="submit">Resubmit corrected marks</button></form>}
-          {submission && submission.status !== 'RETURNED' && <p className="notice">Marks are locked while this submission is being reviewed, approved or published.</p>}
-        </>}
+      {!selected && <div className="notice" role="status">Select or tap a course above to load its marks-entry table. No course is preselected.</div>}
+      {offerings.map((offering) => {
+        const offeringAssessments = assessments.filter((item) => item.offering_id === offering.id)
+        const offeringStudents = studentsByOffering[offering.id] ?? []
+        const offeringSubmission = submissions.find((item) => item.offering_id === offering.id)
+        const offeringWeight = offeringAssessments.reduce((sum, item) => sum + Number(item.weight), 0)
+        const offeringCoursework = offeringAssessments.filter((item) => item.assessment_type !== 'EXAM').reduce((sum, item) => sum + Number(item.weight), 0)
+        const offeringExam = offeringAssessments.filter((item) => item.assessment_type === 'EXAM').reduce((sum, item) => sum + Number(item.weight), 0)
+        return <section key={offering.id} hidden={selectedOffering !== offering.id} aria-label={offering.label} style={{marginTop:20}}>
+          <div className="selected-course-heading"><div><span className="kicker">SELECTED COURSE</span><h3>{offering.label}</h3></div><span className="tag">{offeringStudents.length} enrolled</span></div>
+          <p className="subtle">Coursework: {offeringCoursework}% / 40% maximum · Examination: {offeringExam}% / 60% maximum · Total configured: {offeringWeight}%</p>
+          {offeringSubmission && <p><StatusBadge value={offeringSubmission.status} /></p>}
+          {offeringSubmission?.status === 'RETURNED' && <div className="notice error"><strong>Reviewer comment:</strong> {offeringSubmission.reviewer_note || 'Review the returned marks and correct them.'}</div>}
+          {offeringAssessments.length === 0 || offeringStudents.length === 0 ? <Empty>{offeringAssessments.length === 0 ? 'No assessments have been configured for this course yet.' : 'There are no actively enrolled students in this course.'}</Empty> : <>
+            <form action={saveBatchMarks}>
+              <input type="hidden" name="offering_id" value={offering.id} />
+              <DataTable headings={['Student name', 'Registration number', 'Enrolment status', ...offeringAssessments.map((item) => item.title + ' (' + item.maximum_mark + ')')]}>
+                {offeringStudents.map((student) => <tr key={student.student_id}>
+                  <td><strong>{student.full_name || 'Name not available'}</strong><small className="subtle" style={{display:'block'}}>{student.institutional_email}</small></td>
+                  <td><code>{student.student_number || 'Not available'}</code></td>
+                  <td><strong>Enrolled</strong><small className="subtle" style={{display:'block'}}>Eligible for all marks</small></td>
+                  {offeringAssessments.map((assessment) => <td key={assessment.id}><input aria-label={assessment.title + ' mark for ' + (student.student_number || student.full_name)} type="number" min="0" max={assessment.maximum_mark} step="0.01" name={'mark-' + assessment.id + '-' + student.student_id} defaultValue={existing.get(assessment.id + ':' + student.student_id) ?? ''} disabled={Boolean(offeringSubmission && offeringSubmission.status !== 'RETURNED')} /></td>)}
+                </tr>)}
+              </DataTable>
+              {(!offeringSubmission || offeringSubmission.status === 'RETURNED') && <div className="actions"><button type="submit">Save marks for {offering.label.split(' · ')[0]}</button></div>}
+            </form>
+            {!offeringSubmission && <form action={submitResults} className="form-grid" style={{marginTop:16}}><input type="hidden" name="offering_id" value={offering.id}/><div className="field"><label>Submission note (optional)</label><input name="lecturer_note" maxLength={500}/></div><button type="submit">Submit results for departmental review</button></form>}
+            {offeringSubmission?.status === 'RETURNED' && <form action={resubmitResults} className="form-grid" style={{marginTop:16}}><input type="hidden" name="submission_id" value={offeringSubmission.id}/><div className="field"><label>Correction note</label><input name="lecturer_note" maxLength={500} required/></div><button type="submit">Resubmit corrected marks</button></form>}
+            {offeringSubmission && offeringSubmission.status !== 'RETURNED' && <p className="notice">Marks are locked while this submission is being reviewed, approved or published.</p>}
+          </>}
+        </section>
+      })}
+    </>}
       </>}
     </>}
   </section>
