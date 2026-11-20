@@ -549,3 +549,14 @@ body::before {
 .google-mark{width:20px;height:20px;flex:0 0 20px}
 
 .mobile-signout{padding:12px 0 4px;border-top:1px solid var(--border);margin-top:8px}.mobile-signout button{width:100%;min-height:42px;justify-content:center}
+
+
+/* Lecturer course picker: touch-friendly, horizontally scrollable on small screens. */
+.course-picker{display:flex;gap:10px;overflow-x:auto;overscroll-behavior-x:contain;padding:4px 2px 12px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
+.course-picker-option{flex:0 0 auto;max-width:min(360px,85vw);min-height:46px;padding:11px 16px;border:1px solid var(--border);border-radius:9px;background:#fff;color:var(--must-navy);font-weight:700;text-align:left;white-space:normal;scroll-snap-align:start;touch-action:pan-x}
+.course-picker-option:hover{border-color:var(--must-blue);background:#f4f7fc}
+.course-picker-option.active{border-color:var(--must-blue);background:var(--must-blue);color:#fff;box-shadow:0 0 0 2px rgba(36,75,155,.12)}
+.selected-course-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:18px 0 8px}
+.selected-course-heading h3{margin:4px 0 0;overflow-wrap:anywhere}
+[hidden]{display:none!important}
+@media(max-width:640px){.course-picker{margin-right:-4px}.course-picker-option{max-width:82vw}.selected-course-heading{align-items:flex-start;flex-direction:column}.selected-course-heading .tag{align-self:flex-start}}
