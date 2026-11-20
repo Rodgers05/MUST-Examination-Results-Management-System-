@@ -151,32 +151,22 @@ No production data, schema, Auth setting or migration was changed during this au
 
 | Record / control | Current result |
 |---|---:|
-| Profiles / Auth users | 18 / 18 |
-| Active profiles | 18 |
-| Auth-confirmed users | 14 |
-| Active profiles with `email_verified = false` | 4 |
-| Existing profiles with non-MUST email domains | 12 |
-| Non-MUST profiles that are active, Auth-confirmed and profile-verified | 10 |
-| Active students missing a registration number | 8 |
-| Active staff missing a staff number | 10 |
-| Course offerings | 4 |
-| Enrolments in ENROLLED status | 6 |
-| Course-staff assignments | 2 |
-| Course-staff/profile role mismatches | 0 |
-| Assessments / marks | 5 / 2 |
+| Account records | Existing records present; reconcile against authorised MUST records |
+| Legacy email-domain state | Non-MUST records remain and require reconciliation |
+| Student/staff identifiers | Some records lack official registration or staff numbers |
+| Course-staff/profile role consistency | No current assignment-role mismatches |
+| Public application tables with RLS enabled | 17 / 17 |
 | Result submissions / published results | 0 / 0 |
 | Attendance sessions / attendance records | 0 / 0 |
-| Support tickets | 8 |
-| Public application tables with RLS enabled | 17 / 17 |
 
 Existing non-MUST accounts and missing registration/staff numbers were left untouched. Do not invent or bulk-edit institutional identity data; reconcile it with authorised MUST records first.
 
 ### Security and authentication blockers
 
-- The live `auto_confirm_must_signup` trigger automatically confirms MUST-domain Supabase Auth users. The `on_auth_user_created_must` trigger calls `handle_new_must_user()` after signup; the current `handle_new_must_user()` creates an ACTIVE, `email_verified = true` STUDENT profile for a MUST-domain signup (bypassing both inbox verification and administrator approval) and a PENDING profile for a non-MUST email (instead of rejecting it at the database boundary).
-- All 12 existing non-MUST profiles are ACTIVE. Ten are also Auth-confirmed and `profiles.email_verified = true`; they include one REGISTRAR and four LECTURERS. One non-MUST lecturer has two course-staff assignments. The non-MUST REGISTRAR is treated as an enrollment manager by RLS. Because the live database role helper does not enforce the MUST domain, these accounts can potentially bypass the application's email checks by authenticating directly against Supabase Auth/REST and then pass role-based RLS checks.
-- The live `admin_set_user_access` SECURITY DEFINER function currently writes `auth.users.email_confirmed_at` and sets `profiles.email_verified = true` when an administrator activates an account, without checking the target email domain. This manufactures inbox verification and can activate legacy non-MUST accounts.
-- The private `current_role()` helper currently checks only `account_status = 'ACTIVE'`; it does not require `email_verified = true` or a MUST institutional email domain. Application checks exist, but the database helper therefore does not independently enforce the verified-email/domain gate for every RLS policy and protected RPC. This is a **production security blocker**, not merely a cleanup item.
+- The live database signup triggers currently auto-confirm and activate MUST-domain signups rather than requiring independent inbox verification and administrator approval. Non-MUST signups can also create pending profile records instead of being rejected at the database boundary.
+- Legacy non-MUST profiles remain in the production database. The database role helper checks active status but does not independently enforce the MUST institutional domain or verified-email flag for RLS policies and protected RPCs. This is a **production authorization blocker**; application-level validation alone is not sufficient.
+- The live administrator approval RPC currently sets the Auth email-confirmation timestamp and profile verification flag when activating an account. Administrator approval can therefore manufacture inbox verification instead of remaining separate from email ownership.
+- The private `current_role()` helper must require both a verified profile and an approved MUST institutional email domain before returning a role. That change must be reviewed and tested against every RLS policy and protected RPC before release.
 - PR [#11 — Require real MUST inbox verification](https://github.com/Rodgers05/MUST-Examination-Results-Management-System-/pull/11) contains a pending migration draft to remove automatic confirmation, synchronize the profile flag from Supabase Auth, and stop administrator approval from manufacturing verification. It is not merged or applied. The draft must also add and test the `current_role()` email-verification condition before it is considered release-ready.
 - Supabase security advisors report 8 authenticated-callable public `SECURITY DEFINER` functions and disabled leaked-password protection. The reviewed functions use an empty `search_path` and contain role/assignment checks, but the email-verification helper issue above must be corrected before relying on them for verified-email enforcement. Do not revoke RPC execution blindly because the application uses these functions for marks, attendance, support, review and publication.
 - The performance advisor reports 17 unused indexes; review them against real workload before removing anything. The health advisor returned no findings.
