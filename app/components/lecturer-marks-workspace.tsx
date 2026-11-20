@@ -22,9 +22,6 @@ export function LecturerMarksWorkspace({
   const [selectedOffering, setSelectedOffering] = useState('')
   const selected = offerings.find((item) => item.id === selectedOffering)
   const existing = new Map(marks.map((item) => [item.assessment_id + ':' + item.student_id, item.mark]))
-  const courseworkWeight = selectedAssessments.filter((item) => item.assessment_type !== 'EXAM').reduce((sum, item) => sum + Number(item.weight), 0)
-  const examWeight = selectedAssessments.filter((item) => item.assessment_type === 'EXAM').reduce((sum, item) => sum + Number(item.weight), 0)
-  const totalWeight = courseworkWeight + examWeight
 
   return <section className="card" aria-labelledby="marks-workspace-title">
     <div className="card-heading"><div><h2 id="marks-workspace-title">Enter coursework and examination marks</h2><p className="subtle">Choose one of your assigned course offerings. Only that course&apos;s enrolled students and assessments will appear in the marks table.</p></div></div>
@@ -67,8 +64,6 @@ export function LecturerMarksWorkspace({
           </>}
         </section>
       })}
-    </>}
-      </>}
     </>}
   </section>
 }
