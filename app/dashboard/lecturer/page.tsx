@@ -9,8 +9,8 @@ const rows = (value: unknown): Row[] => Array.isArray(value) ? value as Row[] : 
 const value = (row: Row, key: string) => String(row[key] ?? '')
 const id = (row: Row) => value(row, 'id')
 
-export default async function LecturerMarksPage({ searchParams }: { searchParams: Promise<{ notice?: string }> }) {
-  const [{ notice }, profile] = await Promise.all([searchParams, requireActiveProfile(['LECTURER'])])
+export default async function LecturerMarksPage({ searchParams }: { searchParams: Promise<{ notice?: string; course?: string }> }) {
+  const [{ notice, course }, profile] = await Promise.all([searchParams, requireActiveProfile(['LECTURER'])])
   const supabase = await createClient()
   const { data: assignments, error: assignmentError } = await supabase
     .from('course_staff').select('offering_id').eq('user_id', profile.id).eq('assignment_role', 'LECTURER')
@@ -83,6 +83,7 @@ export default async function LecturerMarksPage({ searchParams }: { searchParams
         studentsByOffering={studentsByOffering}
         submissions={submissions.map((item) => ({ id: id(item), offering_id: value(item, 'offering_id'), status: value(item, 'status'), reviewer_note: value(item, 'reviewer_note'), lecturer_note: value(item, 'lecturer_note') }))}
         marks={rows(marksResult.data).map((item) => ({ assessment_id: value(item, 'assessment_id'), student_id: value(item, 'student_id'), mark: value(item, 'mark') }))}
+        initialSelectedOffering={course && offeringIds.includes(course) ? course : undefined}
       />
     </main>
   </DashboardFrame>
