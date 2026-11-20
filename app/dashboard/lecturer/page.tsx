@@ -83,15 +83,13 @@ export default async function LecturerMarksPage({ searchParams }: { searchParams
             <td>{value(item, 'weight')}%</td>
             <td>
               <details>
-                <summary>{locked ? 'View locked' : 'Edit'}</summary>
-                <form action={updateAssessment} className="form-grid" style={{minWidth:240,marginTop:10}}>
+                <summary>{locked ? 'Weight locked' : 'Edit weight'}</summary>
+                <form action={updateAssessment} className="form-grid" style={{minWidth:220,marginTop:10}}>
                   <input type="hidden" name="assessment_id" value={id(item)} />
                   <input type="hidden" name="offering_id" value={value(item, 'offering_id')} />
-                  <div className="field"><label>Assessment title</label><input name="title" defaultValue={value(item, 'title')} maxLength={120} required disabled={locked}/></div>
-                  <div className="field"><label>Assessment category</label><select name="assessment_type" defaultValue={value(item, 'assessment_type')} disabled={locked}><option value="TEST">Coursework — Test</option><option value="COURSEWORK">Coursework — Assignment / take-home</option><option value="PRACTICAL">Coursework — Practical</option><option value="EXAM">End-of-semester examination</option></select></div>
-                  <div className="field"><label>Maximum mark</label><input type="number" name="maximum_mark" defaultValue={value(item, 'maximum_mark')} min="0.01" max="100" step="0.01" required disabled={locked}/></div>
-                  <div className="field"><label>Weight (%)</label><input type="number" name="weight" defaultValue={value(item, 'weight')} min="0.01" max="100" step="0.01" required disabled={locked}/></div>
-                  {locked ? <p className="subtle">Locked because this course is already in the review workflow.</p> : <button type="submit">Save assessment changes</button>}
+                  <p className="subtle">{value(item, 'title')} · Raw marks already entered will not be changed.</p>
+                  <div className="field"><label>Assessment weight (%)</label><input type="number" name="weight" defaultValue={value(item, 'weight')} min="0.01" max="100" step="0.01" required disabled={locked}/></div>
+                  {locked ? <p className="subtle">Locked because this course is already in the review workflow. Ask the reviewer to return it if a correction is required.</p> : <button type="submit">Save weight correction</button>}
                 </form>
               </details>
             </td>
