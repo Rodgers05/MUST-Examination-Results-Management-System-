@@ -260,7 +260,7 @@ export async function saveBatchMarks(form: FormData) {
     p_offering_id: offeringId,
     p_marks: validatedMarks,
   })
-  if (saveError) say(saveError.message || 'The database rejected the mark batch. Check assessment and attendance rules.')
+  if (saveError) say(saveError.message || 'The database rejected the mark batch. Check enrolment and assessment rules.')
   revalidatePath('/dashboard')
   revalidatePath('/dashboard/lecturer')
   say('Batch marks saved and validated against enrolment and assessment limits.')
