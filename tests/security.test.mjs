@@ -198,11 +198,15 @@ test('hardened write permissions are respected by dashboard actions', async () =
   assert.doesNotMatch(dashboard, /updateSupportTicket/)
 })
 
-test('student results are read only for the authenticated profile', async () => {
-  const dashboard = await readFile(new URL('../app/dashboard/page.tsx', import.meta.url), 'utf8')
+test('student results stay scoped to the authenticated profile and submitted marks remain locked', async () => {
+  const [dashboard, actions] = await Promise.all([
+    readFile(new URL('../app/dashboard/page.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../app/dashboard/actions.ts', import.meta.url), 'utf8'),
+  ])
   assert.match(dashboard, /profile\.role === 'STUDENT'[\s\S]*?published_results[\s\S]*?\.eq\('student_id', profile\.id\)/)
-  assert.match(dashboard, /Reviewer comments:/)
-  assert.match(dashboard, /Marks are locked while this submission is under review/)
+  assert.match(dashboard, /'Reviewer comments'/)
+  assert.match(actions, /submission && submission\.status !== 'RETURNED'/)
+  assert.match(actions, /Marks can only be changed before submission or after a reviewer returns the results/)
 })
 
 test('shared MUST presentation keeps role navigation, mobile navigation and workflow sections', async () => {
