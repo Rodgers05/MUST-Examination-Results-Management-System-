@@ -117,28 +117,22 @@ The previous Express/MySQL implementation and its scripts are retained only as a
 
 ## Release verification (2026-11-20)
 
-### Latest production release
+### Current production application release
 
-The latest production source is commit `abfe33d997f09e76c9abf5e396a8f4006577337d` (PR [#12 — Fix student results security regression test](https://github.com/Rodgers05/MUST-Examination-Results-Management-System-/pull/12)). The PR changes tests only; it does not change application behavior or database records.
+The current application release is commit `517155f6c20666574db4447c4c3ed26d411f7e05` (PR [#14 — Enforce MUST email verification in login and OAuth callback](https://github.com/Rodgers05/MUST-Examination-Results-Management-System-/pull/14)).
 
-GitHub Actions completed successfully on this commit:
-- Dependency advisory check
-- ESLint
-- TypeScript type-check
-- Automated test suite
-- Next.js production build
-
-Both existing Vercel projects are **READY** in the **production** target and report this exact Git commit:
-- `must-exam-results`: deployment `dpl_4oxGtHW3eJknCySZxdtn7DseJ631`; alias `https://must-exam-results.vercel.app`.
-- `mustexaminationresultsmanagementsystem`: deployment `dpl_F3ivdF72jgDE5AE3ia7aVuCqzuf5`; alias `https://mustexaminationresultsmanagementsys.vercel.app`.
+The PR's full quality workflow passed dependency advisories, ESLint, TypeScript, all 14 automated tests and the Next.js production build. Both existing Vercel projects report **READY** on the **production** target for this exact commit:
+- `must-exam-results`: deployment `dpl_2K55XYMUfvsb84PMHaFwwNnvNPxt`; alias `https://must-exam-results.vercel.app`.
+- `mustexaminationresultsmanagementsystem`: deployment `dpl_CG3WHrZdL2LkpVystAgfXGAVahWy`; alias `https://mustexaminationresultsmanagementsys.vercel.app`.
 
 **URL routing caveat:** the first alias is verified by Vercel but has a 307 redirect to `must-results.is-a.dev`, which Vercel still reports as unverified. The second alias is verified and has no redirect, so it is the direct fallback URL. The custom domains `must-results.is-a.dev` and `portal.mustresultsnomaclcloudsonline.aclclouds.online` are not verified. Do not treat preview URLs as production URLs.
 
 ### Current application behaviour
 
-- Registration, password login and confirmation resend validate MUST institutional domains `@must.ac.ug` and `@std.must.ac.ug` in application code.
-- The login page exposes Google sign-in, but the Google provider credentials and end-to-end callback have not been verified.
-- Protected application workspaces check the profile's `email_verified` flag and active account status.
+- Registration, password login, confirmation resend and password-reset requests validate MUST institutional domains `@must.ac.ug` and `@std.must.ac.ug` in application code.
+- Password login now requires `profiles.email_verified = true`. The Google OAuth callback now rejects non-MUST email domains and requires the same verified profile flag before redirecting to a pending or active workspace.
+- The login page exposes Google sign-in, but the Google provider credentials and a real end-to-end Google sign-in have not been verified.
+- Protected application workspaces also check the profile's `email_verified` flag and active account status.
 - Role-specific dashboard visibility is implemented for ADMIN, LECTURER, REVIEWER, REGISTRAR and STUDENT. Student published-result queries are scoped to the authenticated profile; lecturer course rosters are scoped to assigned offerings.
 - Desktop sidebar and mobile navigation both include a sign-out action.
 - The lecturer marks workspace requires the lecturer to select a course offering; only that offering's enrolled students and assessments appear. Batch saves validate the full assessment/student matrix, enrolment, duplicate rows and assessment maximums through the `save_batch_marks` database RPC.
@@ -174,12 +168,13 @@ Existing non-MUST accounts and missing registration/staff numbers were left unto
 
 ### Security and authentication blockers
 
+- The live `auto_confirm_must_signup` trigger still automatically confirms new Supabase Auth users. The `on_auth_user_created_must` trigger calls `handle_new_must_user()` after signup.
 - The live `admin_set_user_access` SECURITY DEFINER function currently writes `auth.users.email_confirmed_at` and sets `profiles.email_verified = true` when an administrator activates an account. This manufactures inbox verification and defeats the intended separation between account approval and email ownership.
-- The private `current_role()` helper currently checks `account_status = 'ACTIVE'` but does not also require `email_verified = true`. Application workspace checks exist, but the database helper therefore does not independently enforce the verified-email gate for every RLS policy and protected RPC.
-- PR [#11 — Require real MUST inbox verification](https://github.com/Rodgers05/MUST-Examination-Results-Management-System-/pull/11) contains a pending migration draft to remove automatic confirmation, synchronize the profile flag from Supabase Auth, and stop administrator approval from manufacturing verification. It is not merged or applied. The draft also needs the `current_role()` database gate reviewed before release.
+- The private `current_role()` helper currently checks `account_status = 'ACTIVE'` but does not also require `email_verified = true`. Application checks exist, but the database helper therefore does not independently enforce the verified-email gate for every RLS policy and protected RPC.
+- PR [#11 — Require real MUST inbox verification](https://github.com/Rodgers05/MUST-Examination-Results-Management-System-/pull/11) contains a pending migration draft to remove automatic confirmation, synchronize the profile flag from Supabase Auth, and stop administrator approval from manufacturing verification. It is not merged or applied. The draft must also add and test the `current_role()` email-verification condition before it is considered release-ready.
 - Supabase security advisors report 8 authenticated-callable public `SECURITY DEFINER` functions and disabled leaked-password protection. The reviewed functions use an empty `search_path` and contain role/assignment checks, but the email-verification helper issue above must be corrected before relying on them for verified-email enforcement. Do not revoke RPC execution blindly because the application uses these functions for marks, attendance, support, review and publication.
 - The performance advisor reports 17 unused indexes; review them against real workload before removing anything. The health advisor returned no findings.
-- SMTP confirmation and password-reset delivery have not been verified with a real MUST mailbox. Google OAuth provider configuration and callback behaviour are also unverified. Auth log inspection did not provide evidence of a successful end-to-end email delivery test.
+- SMTP confirmation and password-reset delivery have not been verified with a real MUST mailbox. Auth log inspection did not provide evidence of a successful end-to-end email delivery test.
 
 **Do not apply the pending Auth migration or change Supabase Auth settings until SMTP delivery is proven, existing users receive a re-verification plan, and a reviewed backup/rollback procedure is ready.** The four active-but-unverified profiles and 12 legacy non-MUST profiles require authorised account reconciliation; do not delete, auto-confirm or silently reclassify them.
 
