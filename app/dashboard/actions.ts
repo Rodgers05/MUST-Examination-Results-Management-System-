@@ -203,6 +203,48 @@ export async function createAssessment(form: FormData) {
   say('Assessment saved.')
 }
 
+export async function updateAssessment(form: FormData) {
+  const { profile, supabase } = await actor(['LECTURER'])
+  const assessmentId = id(form, 'assessment_id')
+  const offeringId = id(form, 'offering_id')
+  const title = value(form, 'title')
+  const assessment_type = value(form, 'assessment_type')
+  const maximum_mark = Number(value(form, 'maximum_mark'))
+  const weight = Number(value(form, 'weight'))
+  if (!validId(assessmentId) || !validId(offeringId)) say('Choose a valid assessment and course.')
+  if (title.length < 2 || title.length > 120) say('Assessment title must be between 2 and 120 characters.')
+  if (!['TEST', 'COURSEWORK', 'PRACTICAL', 'EXAM'].includes(assessment_type)) say('Choose a valid assessment category.')
+  if (!Number.isFinite(maximum_mark) || maximum_mark <= 0 || maximum_mark > 100) say('Maximum mark must be greater than 0 and no more than 100.')
+  if (!Number.isFinite(weight) || weight <= 0 || weight > 100) say('Assessment weight must be greater than 0 and no more than 100.')
+  if (!(await assigned(supabase, profile.id, offeringId, 'LECTURER'))) say('You are not assigned to this course offering.')
+
+  const { data: current, error: currentError } = await supabase.from('assessments')
+    .select('id,offering_id').eq('id', assessmentId).eq('offering_id', offeringId).maybeSingle()
+  if (currentError || !current) say('The assessment could not be found in this course.')
+
+  const { data: submission, error: submissionError } = await supabase.from('result_submissions')
+    .select('id,status').eq('offering_id', offeringId).maybeSingle()
+  if (submissionError) say('Could not verify the results workflow for this course.')
+  if (submission && submission.status !== 'RETURNED') say('This course has already been submitted for review. Assessment details are locked until the reviewer returns the results.')
+
+  const { data: otherAssessments, error: assessmentsError } = await supabase.from('assessments')
+    .select('id,assessment_type,weight').eq('offering_id', offeringId).neq('id', assessmentId)
+  if (assessmentsError) say('Could not validate the other assessment weights.')
+  const categoryLimit = assessment_type === 'EXAM' ? 60 : 40
+  const categoryTotal = (otherAssessments ?? [])
+    .filter((item) => (item.assessment_type === 'EXAM') === (assessment_type === 'EXAM'))
+    .reduce((sum, item) => sum + Number(item.weight), 0)
+  if (categoryTotal + weight > categoryLimit + 0.01) say(`This change would exceed the ${categoryLimit}% ${assessment_type === 'EXAM' ? 'examination' : 'coursework'} weighting limit.`)
+
+  const { data: updated, error: updateError } = await supabase.from('assessments')
+    .update({ title, assessment_type, maximum_mark, weight })
+    .eq('id', assessmentId).eq('offering_id', offeringId).select('id').maybeSingle()
+  if (updateError || !updated) say('The assessment was not updated. It may be locked or your course assignment may have changed.')
+  revalidatePath('/dashboard')
+  revalidatePath('/dashboard/lecturer')
+  say('Assessment details and weighting updated. Previously entered raw marks were preserved.')
+}
+
 export async function saveBatchMarks(form: FormData) {
   const { profile, supabase } = await actor(['LECTURER'])
   const offeringId = id(form, 'offering_id')
