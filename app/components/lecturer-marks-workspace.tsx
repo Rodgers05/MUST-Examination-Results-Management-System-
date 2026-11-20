@@ -1,0 +1,66 @@
+"use client"
+
+import { useState } from 'react'
+import { DataTable, Empty, StatusBadge } from '@/app/components/portal-ui'
+import { resubmitResults, saveBatchMarks, submitResults } from '@/app/dashboard/actions'
+
+type Offering = { id: string; label: string }
+type Assessment = { id: string; offering_id: string; title: string; assessment_type: string; maximum_mark: number; weight: number }
+type Student = { student_id: string; full_name: string; student_number: string; institutional_email: string }
+type Submission = { id: string; offering_id: string; status: string; reviewer_note: string; lecturer_note: string }
+type Mark = { assessment_id: string; student_id: string; mark: string }
+
+export function LecturerMarksWorkspace({
+  offerings, assessments, studentsByOffering, submissions, marks,
+}: {
+  offerings: Offering[]
+  assessments: Assessment[]
+  studentsByOffering: Record<string, Student[]>
+  submissions: Submission[]
+  marks: Mark[]
+}) {
+  const [selectedOffering, setSelectedOffering] = useState('')
+  const selected = offerings.find((item) => item.id === selectedOffering)
+  const selectedAssessments = assessments.filter((item) => item.offering_id === selectedOffering)
+  const selectedStudents = studentsByOffering[selectedOffering] ?? []
+  const submission = submissions.find((item) => item.offering_id === selectedOffering)
+  const existing = new Map(marks.map((item) => [item.assessment_id + ':' + item.student_id, item.mark]))
+  const courseworkWeight = selectedAssessments.filter((item) => item.assessment_type !== 'EXAM').reduce((sum, item) => sum + Number(item.weight), 0)
+  const examWeight = selectedAssessments.filter((item) => item.assessment_type === 'EXAM').reduce((sum, item) => sum + Number(item.weight), 0)
+  const totalWeight = courseworkWeight + examWeight
+
+  return <section className="card" aria-labelledby="marks-workspace-title">
+    <div className="card-heading"><div><h2 id="marks-workspace-title">Enter coursework and examination marks</h2><p className="subtle">Choose one of your assigned course offerings. Only that course&apos;s enrolled students and assessments will appear in the marks table.</p></div></div>
+    {offerings.length === 0 ? <Empty>No lecturer course offerings are assigned to your account. Contact the administrator to be assigned to a course.</Empty> : <>
+      <div className="field">
+        <label id="marks-course-label">Select course offering</label>
+        <div className="course-picker" role="group" aria-labelledby="marks-course-label">
+          {offerings.map((offering) => <button key={offering.id} type="button" className={selectedOffering === offering.id ? 'course-picker-option active' : 'course-picker-option'} aria-pressed={selectedOffering === offering.id} onClick={() => setSelectedOffering(offering.id)}>{offering.label}</button>)}
+        </div>
+      </div>
+      {!selected ? <div className="notice" role="status">Select or tap a course above to load its marks-entry table. No course is preselected.</div> : <>
+        <div className="selected-course-heading"><div><span className="kicker">SELECTED COURSE</span><h3>{selected.label}</h3></div><span className="tag">{selectedStudents.length} enrolled</span></div>
+        <p className="subtle">Coursework: {courseworkWeight}% / 40% maximum · Examination: {examWeight}% / 60% maximum · Total configured: {totalWeight}%</p>
+        {submission && <p><StatusBadge value={submission.status} /></p>}
+        {submission?.status === 'RETURNED' && <div className="notice error"><strong>Reviewer comment:</strong> {submission.reviewer_note || 'Review the returned marks and correct them.'}</div>}
+        {selectedAssessments.length === 0 || selectedStudents.length === 0 ? <Empty>{selectedAssessments.length === 0 ? 'No assessments have been configured for this course yet.' : 'There are no actively enrolled students in this course.'}</Empty> : <>
+          <form action={saveBatchMarks} key={selectedOffering + ':marks'}>
+            <input type="hidden" name="offering_id" value={selectedOffering} />
+            <DataTable headings={['Student name', 'Registration number', 'Enrolment status', ...selectedAssessments.map((item) => item.title + ' (' + item.maximum_mark + ')')]}>
+              {selectedStudents.map((student) => <tr key={student.student_id}>
+                <td><strong>{student.full_name || 'Name not available'}</strong><small className="subtle" style={{display:'block'}}>{student.institutional_email}</small></td>
+                <td><code>{student.student_number || 'Not available'}</code></td>
+                <td><strong>Enrolled</strong><small className="subtle" style={{display:'block'}}>Eligible for all marks</small></td>
+                {selectedAssessments.map((assessment) => <td key={assessment.id}><input aria-label={assessment.title + ' mark for ' + (student.student_number || student.full_name)} type="number" min="0" max={assessment.maximum_mark} step="0.01" name={'mark-' + assessment.id + '-' + student.student_id} defaultValue={existing.get(assessment.id + ':' + student.student_id) ?? ''} disabled={Boolean(submission && submission.status !== 'RETURNED')} /></td>)}
+              </tr>)}
+            </DataTable>
+            {(!submission || submission.status === 'RETURNED') && <div className="actions"><button type="submit">Save marks for {selected.label.split(' · ')[0]}</button></div>}
+          </form>
+          {!submission && <form action={submitResults} className="form-grid" style={{marginTop:16}}><input type="hidden" name="offering_id" value={selectedOffering}/><div className="field"><label>Submission note (optional)</label><input name="lecturer_note" maxLength={500}/></div><button type="submit">Submit results for departmental review</button></form>}
+          {submission?.status === 'RETURNED' && <form action={resubmitResults} className="form-grid" style={{marginTop:16}}><input type="hidden" name="submission_id" value={submission.id}/><div className="field"><label>Correction note</label><input name="lecturer_note" maxLength={500} required/></div><button type="submit">Resubmit corrected marks</button></form>}
+          {submission && submission.status !== 'RETURNED' && <p className="notice">Marks are locked while this submission is being reviewed, approved or published.</p>}
+        </>}
+      </>}
+    </>}
+  </section>
+}
