@@ -21,9 +21,6 @@ export function LecturerMarksWorkspace({
 }) {
   const [selectedOffering, setSelectedOffering] = useState('')
   const selected = offerings.find((item) => item.id === selectedOffering)
-  const selectedAssessments = assessments.filter((item) => item.offering_id === selectedOffering)
-  const selectedStudents = studentsByOffering[selectedOffering] ?? []
-  const submission = submissions.find((item) => item.offering_id === selectedOffering)
   const existing = new Map(marks.map((item) => [item.assessment_id + ':' + item.student_id, item.mark]))
   const courseworkWeight = selectedAssessments.filter((item) => item.assessment_type !== 'EXAM').reduce((sum, item) => sum + Number(item.weight), 0)
   const examWeight = selectedAssessments.filter((item) => item.assessment_type === 'EXAM').reduce((sum, item) => sum + Number(item.weight), 0)
