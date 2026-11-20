@@ -11,15 +11,16 @@ type Submission = { id: string; offering_id: string; status: string; reviewer_no
 type Mark = { assessment_id: string; student_id: string; mark: string }
 
 export function LecturerMarksWorkspace({
-  offerings, assessments, studentsByOffering, submissions, marks,
+  offerings, assessments, studentsByOffering, submissions, marks, initialSelectedOffering,
 }: {
   offerings: Offering[]
   assessments: Assessment[]
   studentsByOffering: Record<string, Student[]>
   submissions: Submission[]
   marks: Mark[]
+  initialSelectedOffering?: string
 }) {
-  const [selectedOffering, setSelectedOffering] = useState('')
+  const [selectedOffering, setSelectedOffering] = useState(initialSelectedOffering ?? '')
   const selected = offerings.find((item) => item.id === selectedOffering)
   const existing = new Map(marks.map((item) => [item.assessment_id + ':' + item.student_id, item.mark]))
 
@@ -48,6 +49,7 @@ export function LecturerMarksWorkspace({
           {offeringAssessments.length === 0 || offeringStudents.length === 0 ? <Empty>{offeringAssessments.length === 0 ? 'No assessments have been configured for this course yet.' : 'There are no actively enrolled students in this course.'}</Empty> : <>
             <form action={saveBatchMarks}>
               <input type="hidden" name="offering_id" value={offering.id} />
+              <input type="hidden" name="next_offering_id" value={offerings[(offerings.findIndex((item) => item.id === offering.id) + 1) % offerings.length]?.id ?? offering.id} />
               <DataTable headings={['Student name', 'Registration number', 'Enrolment status', ...offeringAssessments.map((item) => item.title + ' (' + item.maximum_mark + ')')]}>
                 {offeringStudents.map((student) => <tr key={student.student_id}>
                   <td><strong>{student.full_name || 'Name not available'}</strong><small className="subtle" style={{display:'block'}}>{student.institutional_email}</small></td>
@@ -56,7 +58,7 @@ export function LecturerMarksWorkspace({
                   {offeringAssessments.map((assessment) => <td key={assessment.id}><input aria-label={assessment.title + ' mark for ' + (student.student_number || student.full_name)} type="number" min="0" max={assessment.maximum_mark} step="0.01" required name={'mark-' + assessment.id + '-' + student.student_id} defaultValue={existing.get(assessment.id + ':' + student.student_id) ?? ''} disabled={Boolean(offeringSubmission && offeringSubmission.status !== 'RETURNED')} /></td>)}
                 </tr>)}
               </DataTable>
-              {(!offeringSubmission || offeringSubmission.status === 'RETURNED') && <div className="actions"><button type="submit">Save marks for {offering.label.split(' · ')[0]}</button></div>}
+              {(!offeringSubmission || offeringSubmission.status === 'RETURNED') && <div className="actions"><button type="submit">Save marks &amp; open next course</button></div>}
             </form>
             {!offeringSubmission && <form action={submitResults} className="form-grid" style={{marginTop:16}}><input type="hidden" name="offering_id" value={offering.id}/><div className="field"><label>Submission note (optional)</label><input name="lecturer_note" maxLength={500}/></div><button type="submit">Submit results for departmental review</button></form>}
             {offeringSubmission?.status === 'RETURNED' && <form action={resubmitResults} className="form-grid" style={{marginTop:16}}><input type="hidden" name="submission_id" value={offeringSubmission.id}/><div className="field"><label>Correction note</label><input name="lecturer_note" maxLength={500} required/></div><button type="submit">Resubmit corrected marks</button></form>}
