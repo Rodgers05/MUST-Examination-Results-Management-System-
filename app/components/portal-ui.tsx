@@ -19,7 +19,7 @@ function WorkspaceLinks({ profile }: { profile: Profile }) {
 }
 
 export function MustBrand({
-  subtitle = 'Examination Results Management System',
+  subtitle = 'EXAM RESULTS MANAGEMENT SYSTEM',
 }: {
   subtitle?: string
 }) {
@@ -73,7 +73,7 @@ export function DashboardFrame({ profile, children }: { profile: Profile; childr
     : null
   return <div className="dashboard-shell" data-theme={profile.theme_preference ?? 'system'}>
     <aside className="sidebar">
-      <MustBrand subtitle="Results Portal" />
+      <MustBrand subtitle="EXAM RESULTS MANAGEMENT SYSTEM" />
       <div className="side-label">{profile.role} WORKSPACE</div>
       <nav className="side-nav" aria-label="Workspace navigation">
         <WorkspaceLinks profile={profile} />
