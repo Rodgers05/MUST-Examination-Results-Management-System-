@@ -56,7 +56,7 @@ export function LecturerMarksWorkspace({
                   <td><strong>{student.full_name || 'Name not available'}</strong><small className="subtle" style={{display:'block'}}>{student.institutional_email}</small></td>
                   <td><code>{student.student_number || 'Not available'}</code></td>
                   <td><strong>Enrolled</strong><small className="subtle" style={{display:'block'}}>Eligible for all marks</small></td>
-                  {offeringAssessments.map((assessment) => <td key={assessment.id}><input aria-label={assessment.title + ' mark for ' + (student.student_number || student.full_name)} type="number" min="0" max={assessment.maximum_mark} step="0.01" name={'mark-' + assessment.id + '-' + student.student_id} defaultValue={existing.get(assessment.id + ':' + student.student_id) ?? ''} disabled={Boolean(offeringSubmission && offeringSubmission.status !== 'RETURNED')} /></td>)}
+                  {offeringAssessments.map((assessment) => <td key={assessment.id}><input aria-label={assessment.title + ' mark for ' + (student.student_number || student.full_name)} type="number" min="0" max={assessment.maximum_mark} step="0.01" required name={'mark-' + assessment.id + '-' + student.student_id} defaultValue={existing.get(assessment.id + ':' + student.student_id) ?? ''} disabled={Boolean(offeringSubmission && offeringSubmission.status !== 'RETURNED')} /></td>)}
                 </tr>)}
               </DataTable>
               {(!offeringSubmission || offeringSubmission.status === 'RETURNED') && <div className="actions"><button type="submit">Save marks for {offering.label.split(' · ')[0]}</button></div>}
