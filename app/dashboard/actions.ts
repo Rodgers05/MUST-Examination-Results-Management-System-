@@ -49,19 +49,14 @@ async function requireCompleteOffering(supabase: Awaited<ReturnType<typeof creat
   if (courseworkWeight > 40.01 || examWeight > 60.01 || !exams.length) return 'MUST weighting requires coursework not to exceed 40% and end-of-semester examinations not to exceed 60%.'
   if (!(testCount >= 2 || (testCount >= 1 && assignmentCount >= 1))) return 'Coursework must include at least two tests, or one test and one assignment/take-home assessment.'
 
-  const { data: rosterData, error: rosterError } = await supabase.rpc('get_assigned_offering_student_roster', { p_offering_id: offeringId })
-  if (rosterError || !Array.isArray(rosterData)) return 'Could not verify attendance eligibility for this course.'
-  const eligibleStudents = new Set((rosterData as Array<{ student_id: string; examination_eligible: boolean }>).filter((student) => student.examination_eligible === true).map((student) => student.student_id))
-
   const { data: marks, error: marksError } = await supabase.from('marks').select('assessment_id,student_id')
     .in('assessment_id', assessments.map((assessment) => assessment.id))
   if (marksError) return 'Could not verify the assessment marks.'
   const complete = new Set((marks ?? []).map((mark) => mark.assessment_id + ':' + mark.student_id))
   for (const student of enrollments) {
     for (const assessment of assessments) {
-      if (assessment.assessment_type === 'EXAM' && !eligibleStudents.has(student.student_id)) continue
       if (!complete.has(assessment.id + ':' + student.student_id)) {
-        return 'Every enrolled student needs coursework marks, and only attendance-eligible students need examination marks.'
+        return 'Every enrolled student needs a mark for every configured assessment, including the examination.'
       }
     }
   }
@@ -234,19 +229,12 @@ export async function saveBatchMarks(form: FormData) {
 
   const { assessments, enrollments, error } = await offeringRows(supabase, offeringId)
   if (error) say('Could not verify assessments and enrolments for this course.')
-  const { data: rosterData, error: rosterError } = await supabase.rpc('get_assigned_offering_student_roster', { p_offering_id: offeringId })
-  if (rosterError || !Array.isArray(rosterData)) say('Could not verify student attendance eligibility. Refresh and try again.')
-
   const enrolledIds = new Set(enrollments.map((student) => student.student_id))
-  const eligibleIds = new Set((rosterData as Array<{ student_id: string; examination_eligible: boolean }>)
-    .filter((student) => student.examination_eligible === true).map((student) => student.student_id))
   const assessmentById = new Map(assessments.map((assessment) => [assessment.id, assessment]))
   const expected = new Set<string>()
   for (const assessment of assessments) {
     for (const studentId of enrolledIds) {
-      if (assessment.assessment_type !== 'EXAM' || eligibleIds.has(studentId)) {
-        expected.add(assessment.id + ':' + studentId)
-      }
+      expected.add(assessment.id + ':' + studentId)
     }
   }
 
@@ -261,13 +249,12 @@ export async function saveBatchMarks(form: FormData) {
     const assessment = assessmentById.get(assessmentId)
     const key = assessmentId + ':' + studentId
     if (!validId(assessmentId) || !validId(studentId) || !assessment || !enrolledIds.has(studentId)) return say('A mark references a student or assessment outside this assigned course.')
-    if (assessment.assessment_type === 'EXAM' && !eligibleIds.has(studentId)) say('Examination marks can only be entered for students who meet the 80% attendance requirement.')
     if (!Number.isFinite(mark) || mark < 0 || mark > Number(assessment.maximum_mark)) say('A mark is outside the allowed assessment maximum.')
     if (!expected.has(key) || seen.has(key)) say('The batch contains a duplicate or unexpected student-assessment row.')
     seen.add(key)
     validatedMarks.push({ assessment_id: assessmentId, student_id: studentId, mark })
   }
-  if (seen.size !== expected.size) say('Complete all required coursework marks and examination marks for attendance-eligible students before saving.')
+  if (seen.size !== expected.size) say('Enter a mark for every configured assessment for every enrolled student before saving.')
 
   const { error: saveError } = await supabase.rpc('save_batch_marks', {
     p_offering_id: offeringId,
@@ -276,7 +263,7 @@ export async function saveBatchMarks(form: FormData) {
   if (saveError) say(saveError.message || 'The database rejected the mark batch. Check assessment and attendance rules.')
   revalidatePath('/dashboard')
   revalidatePath('/dashboard/lecturer')
-  say('Batch marks saved and validated against enrolment, assessment limits and attendance eligibility.')
+  say('Batch marks saved and validated against enrolment and assessment limits.')
 }
 
 export async function submitResults(form: FormData) {
