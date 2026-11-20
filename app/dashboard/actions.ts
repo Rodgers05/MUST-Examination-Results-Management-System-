@@ -213,15 +213,16 @@ export async function updateAssessment(form: FormData) {
   if (!(await assigned(supabase, profile.id, offeringId, 'LECTURER'))) say('You are not assigned to this course offering.')
   const { data: current, error: currentError } = await supabase.from('assessments').select('id,offering_id,assessment_type').eq('id', assessmentId).eq('offering_id', offeringId).maybeSingle()
   if (currentError) say('The assessment could not be found in this course.')
-  if (!current) say('The assessment could not be found in this course.')
+  const currentAssessmentType = current?.assessment_type
+  if (!currentAssessmentType) say('The assessment could not be found in this course.')
   const { data: submission, error: submissionError } = await supabase.from('result_submissions').select('id,status').eq('offering_id', offeringId).maybeSingle()
   if (submissionError) say('Could not verify the results workflow for this course.')
   if (submission && submission.status !== 'RETURNED') say('This course has already been submitted for review. Assessment weights are locked until the reviewer returns the results.')
   const { data: otherAssessments, error: assessmentsError } = await supabase.from('assessments').select('id,assessment_type,weight').eq('offering_id', offeringId).neq('id', assessmentId)
   if (assessmentsError) say('Could not validate the other assessment weights.')
-  const categoryLimit = current.assessment_type === 'EXAM' ? 60 : 40
-  const categoryTotal = (otherAssessments ?? []).filter((item) => (item.assessment_type === 'EXAM') === (current.assessment_type === 'EXAM')).reduce((sum, item) => sum + Number(item.weight), 0)
-  if (categoryTotal + weight > categoryLimit + 0.01) say('This change would exceed the ' + categoryLimit + '% ' + (current.assessment_type === 'EXAM' ? 'examination' : 'coursework') + ' weighting limit.')
+  const categoryLimit = currentAssessmentType === 'EXAM' ? 60 : 40
+  const categoryTotal = (otherAssessments ?? []).filter((item) => (item.assessment_type === 'EXAM') === (currentAssessmentType === 'EXAM')).reduce((sum, item) => sum + Number(item.weight), 0)
+  if (categoryTotal + weight > categoryLimit + 0.01) say('This change would exceed the ' + categoryLimit + '% ' + (currentAssessmentType === 'EXAM' ? 'examination' : 'coursework') + ' weighting limit.')
   const { data: updated, error: updateError } = await supabase.from('assessments').update({ weight }).eq('id', assessmentId).eq('offering_id', offeringId).select('id').maybeSingle()
   if (updateError || !updated) say('The assessment weight was not updated. It may be locked or your course assignment may have changed.')
   revalidatePath('/dashboard')
