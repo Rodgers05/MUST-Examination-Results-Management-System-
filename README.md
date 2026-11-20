@@ -127,6 +127,10 @@ The PR's full quality workflow passed dependency advisories, ESLint, TypeScript,
 
 **URL routing caveat:** the first alias is verified by Vercel but has a 307 redirect to `must-results.is-a.dev`, which Vercel still reports as unverified. The second alias is verified and has no redirect, so it is the direct fallback URL. The custom domains `must-results.is-a.dev` and `portal.mustresultsnomaclcloudsonline.aclclouds.online` are not verified. Do not treat preview URLs as production URLs.
 
+### Test coverage boundary
+
+The production quality workflow runs `npm test` (14 Node tests under `tests/*.test.mjs`), lint, type-check and a production build. The separate legacy MySQL integration suite (`npm run test:legacy`) requires a dedicated isolated MySQL test database and `LEGACY_DEMO_PASSWORD`; it was not run because only the production Supabase project is connected and no staging project is available. Do not point the legacy suite at production.
+
 ### Current application behaviour
 
 - Registration, password login, confirmation resend and password-reset requests validate MUST institutional domains `@must.ac.ug` and `@std.must.ac.ug` in application code.
