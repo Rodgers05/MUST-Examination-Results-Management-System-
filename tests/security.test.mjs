@@ -136,7 +136,7 @@ test('server contract uses verified claims, role gates, email verification and G
   assert.match(authActions, /email_provider_disabled/)
   assert.match(authActions, /email_confirmed_at/)
   assert.match(authActions, /select\('account_status,email_verified'\)/)
-  assert.match(authActions, /if \(!profile\.email_verified\)/)
+  assert.match(authActions, /if \(!profile\?\.email_verified\)/)
   assert.match(callback, /isValidEmail\(user\.email\)/)
   assert.match(callback, /select\('account_status,email_verified'\)/)
   assert.match(callback, /profile\?\.email_verified/)
