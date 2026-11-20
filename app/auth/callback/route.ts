@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { safeAppPath } from '@/lib/redirects.mjs'
+import { isValidEmail } from '@/lib/validation.mjs'
 
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get('code')
@@ -20,18 +21,23 @@ export async function GET(request: NextRequest) {
           return NextResponse.redirect(new URL('/reset-password', request.url))
         }
 
+        if (!user.email || !isValidEmail(user.email)) {
+          await supabase.auth.signOut()
+          return NextResponse.redirect(new URL('/login?notice=Use%20your%20MUST%20institutional%20email%20address.', request.url))
+        }
+
         if (user.email_confirmed_at) {
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
-            .select('account_status')
+            .select('account_status,email_verified')
             .eq('id', user.id)
             .maybeSingle()
 
-          if (!profileError && profile?.account_status === 'PENDING') {
+          if (!profileError && profile?.email_verified && profile.account_status === 'PENDING') {
             return NextResponse.redirect(new URL('/pending', request.url))
           }
 
-          if (!profileError && profile?.account_status === 'ACTIVE') {
+          if (!profileError && profile?.email_verified && profile.account_status === 'ACTIVE') {
             return NextResponse.redirect(new URL(destination, request.url))
           }
         }

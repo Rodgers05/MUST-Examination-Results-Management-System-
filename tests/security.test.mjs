@@ -116,7 +116,7 @@ test('batch mark validation enforces maximums, enrolment and unique student-asse
 })
 
 test('server contract uses verified claims, role gates, email verification and Google OAuth', async () => {
-  const [authActions, auth, proxy, actions, dashboard, browserClient, loginPage, registerPage] = await Promise.all([
+  const [authActions, auth, proxy, actions, dashboard, browserClient, loginPage, registerPage, callback] = await Promise.all([
     readFile(new URL('../app/auth-actions.ts', import.meta.url), 'utf8'),
     readFile(new URL('../lib/auth.ts', import.meta.url), 'utf8'),
     readFile(new URL('../proxy.ts', import.meta.url), 'utf8'),
@@ -125,6 +125,7 @@ test('server contract uses verified claims, role gates, email verification and G
     readFile(new URL('../lib/supabase/client.ts', import.meta.url), 'utf8'),
     readFile(new URL('../app/login/page.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../app/register/page.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../app/auth/callback/route.ts', import.meta.url), 'utf8'),
   ])
   assert.match(auth, /auth\.getClaims\(\)/)
   assert.match(proxy, /auth\.getClaims\(\)/)
@@ -134,6 +135,11 @@ test('server contract uses verified claims, role gates, email verification and G
   assert.match(authActions, /await headers\(\)/)
   assert.match(authActions, /email_provider_disabled/)
   assert.match(authActions, /email_confirmed_at/)
+  assert.match(authActions, /select\('account_status,email_verified'\)/)
+  assert.match(authActions, /if \(!profile\?\.email_verified\)/)
+  assert.match(callback, /isValidEmail\(user\.email\)/)
+  assert.match(callback, /select\('account_status,email_verified'\)/)
+  assert.match(callback, /profile\?\.email_verified/)
   assert.match(authActions, /signInWithOAuth\([\s\S]*provider: 'google'/)
   assert.doesNotMatch(authActions, /NEXT_PUBLIC_GOOGLE_OAUTH_ENABLED/)
   assert.match(authActions, /data: \{ full_name: fullName \}/)
