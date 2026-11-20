@@ -9,7 +9,7 @@ function WorkspaceLinks({ profile }: { profile: Profile }) {
     <a href="#overview">Overview</a>
     <Link href="/dashboard/profile">My profile</Link>
     <a href="#catalogue">Course catalogue</a>
-    {profile.role === 'LECTURER' && <><Link href="/dashboard/lecturer">Lecturer marks workspace</Link><a href="#assessments">Assessment setup</a><a href="#marks">Batch marks</a></>}
+    {profile.role === 'LECTURER' && <><Link href="/dashboard/lecturer">Lecturer marks workspace</Link><a href="#assessments">Assessment setup</a></>}
     {['REVIEWER', 'REGISTRAR', 'ADMIN'].includes(profile.role) && <a href="#workflow">Results workflow</a>}
     {profile.role === 'STUDENT' && <a href="#results">Published results</a>}
     {['ADMIN', 'REGISTRAR', 'REVIEWER'].includes(profile.role) && <a href="#reports">Reports</a>}
