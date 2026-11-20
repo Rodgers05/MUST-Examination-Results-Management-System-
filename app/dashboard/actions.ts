@@ -263,7 +263,9 @@ export async function saveBatchMarks(form: FormData) {
   if (saveError) say(saveError.message || 'The database rejected the mark batch. Check enrolment and assessment rules.')
   revalidatePath('/dashboard')
   revalidatePath('/dashboard/lecturer')
-  say('Batch marks saved and validated against enrolment and assessment limits.')
+  const nextOfferingId = id(form, 'next_offering_id')
+  const destination = validId(nextOfferingId) && nextOfferingId !== offeringId ? nextOfferingId : offeringId
+  redirect('/dashboard/lecturer?course=' + encodeURIComponent(destination) + '&notice=' + encodeURIComponent('Marks saved successfully. You can continue with the selected course or choose another course.'))
 }
 
 export async function submitResults(form: FormData) {
