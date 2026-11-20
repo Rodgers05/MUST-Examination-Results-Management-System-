@@ -9,11 +9,8 @@ import {
   createSupportTicket,
   publishSubmission,
   removeInvalidStaffAssignment,
-  resubmitResults,
   reviewSubmission,
-  saveBatchMarks,
   setUserAccess,
-  submitResults,
 } from './actions'
 
 type Row = Record<string, unknown>
@@ -293,31 +290,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               {assessments.filter((item) => lecturerOfferingIds.includes(text(item, 'offering_id'))).length > 0 && <Table headings={['Offering', 'Assessment', 'Maximum', 'Weight']}>{assessments.filter((item) => lecturerOfferingIds.includes(text(item, 'offering_id'))).map((item) => <tr key={uid(item)}><td>{offeringText(text(item, 'offering_id'))}</td><td>{text(item, 'title')}</td><td>{text(item, 'maximum_mark')}</td><td>{text(item, 'weight')}%</td></tr>)}</Table>}
             </Card>}
 
-            {profile.role === 'LECTURER' && <Card id="marks" title="Batch mark entry" note="Enter marks for students enrolled in your course. Marks are checked before they are saved.">
-              {lecturerOfferingIds.map((offeringId) => {
-                const offerAssessments = assessments.filter((item) => text(item, 'offering_id') === offeringId)
-                const offerStudents = enrollments.filter((item) => text(item, 'offering_id') === offeringId && text(item, 'enrollment_status') === 'ENROLLED')
-                const submission = submissions.find((item) => text(item, 'offering_id') === offeringId)
-                const existing = new Map(marks.map((item) => [text(item, 'assessment_id') + ':' + text(item, 'student_id'), text(item, 'mark')]))
-                if (!offerAssessments.length || !offerStudents.length) return <div className="notice" key={offeringId}>{offeringText(offeringId)} needs assessments and enrolled students before you can enter marks.</div>
-                return <div key={offeringId} style={{marginTop:20}}><h3><OfferingLabel offering={currentOffering(offeringId) ?? {}} courses={courses} semesters={semesters} /> {submission && <>{status(text(submission, 'status'))}</>}</h3>
-                  {submission && text(submission, 'status') === 'RETURNED' && text(submission, 'reviewer_note') && <div className="notice error" role="status"><strong>Reviewer comments:</strong> {text(submission, 'reviewer_note')}</div>}
-                  <form action={saveBatchMarks}>
-                    <input type="hidden" name="offering_id" value={offeringId} />
-                    <Table headings={['Student name', 'Registration number', 'Enrolment / marks eligibility', ...offerAssessments.map((item) => text(item, 'title') + ' / ' + text(item, 'maximum_mark'))]}>
-                      {offerStudents.map((student) => {
-                        const rosterStudent = rosterByStudent.get(text(student, 'student_id')) ?? {}
-                        return <tr key={uid(student, 'student_id')}><td><strong>{studentName(text(student, 'student_id'))}</strong><small className="subtle" style={{display:'block'}}>{text(rosterStudent, 'institutional_email')}</small></td><td><code>{studentNumber(text(student, 'student_id'))}</code></td><td><strong>Enrolled</strong><small className="subtle" style={{display:'block'}}>Eligible for all marks</small></td>{offerAssessments.map((assessment) => <td key={uid(assessment)}><input aria-label={text(assessment, 'title') + ' mark for ' + studentName(text(student, 'student_id'))} type="number" min="0" max={text(assessment, 'maximum_mark')} step="0.01" name={'mark-' + uid(assessment) + '-' + text(student, 'student_id')} defaultValue={existing.get(uid(assessment) + ':' + text(student, 'student_id')) ?? ''} disabled={Boolean(submission && text(submission, 'status') !== 'RETURNED')} /></td>)}
-                      </tr>})}
-                    </Table>
-                    {(!submission || text(submission, 'status') === 'RETURNED') && <div className="actions"><button type="submit">Save batch marks</button></div>}
-                  </form>
-                  {submission && text(submission, 'status') !== 'RETURNED' && <div className="notice">Marks are locked while this submission is under review, approved or published.</div>}
-                  {!submission && <form action={submitResults} className="form-grid" style={{marginTop:12}}><input type="hidden" name="offering_id" value={offeringId} /><div className="field"><label>Note (optional)</label><input name="lecturer_note" maxLength={500} /></div><button>Submit marks</button></form>}
-                  {submission && text(submission, 'status') === 'RETURNED' && <form action={resubmitResults} className="form-grid" style={{marginTop:12}}><input type="hidden" name="submission_id" value={uid(submission)} /><div className="field"><label>Reason for correction</label><input name="lecturer_note" maxLength={500} required /></div><button>Resubmit marks</button></form>}
-                </div>
-              })}
-              {!lecturerOfferingIds.length && <Empty>No lecturer offerings are assigned to your account.</Empty>}
+            {profile.role === 'LECTURER' && <Card id="marks" title="Batch mark entry" note="Select a course in the dedicated marks workspace. The table will show only the course you select.">
+              <p className="subtle">Your assigned courses are selectable in one workspace. Switching courses changes the student roster and assessment columns without mixing course marks.</p>
+              <a className="button" href="/dashboard/lecturer">Open lecturer marks workspace</a>
             </Card>}
 
             {(profile.role === 'REVIEWER' || profile.role === 'REGISTRAR' || isAdmin) && <Card id="workflow" title={profile.role === 'REVIEWER' ? 'Reviewer queue' : profile.role === 'REGISTRAR' ? 'Registrar workflow' : 'Submission overview'} note="Only assigned staff can take these actions.">
