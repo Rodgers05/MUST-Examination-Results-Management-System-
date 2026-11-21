@@ -107,6 +107,20 @@ The pending migration grants only the operations already constrained by those RL
 
 This migration is not applied or deployed. It must be tested on isolated staging and released only after the verified-MUST database role gate is in place. The application code and SQL migration must be deployed together; deploying only one side would leave affected actions unavailable.
 
+## MUST results approval policy gap — pending workflow implementation
+
+The currently implemented workflow is Lecturer submission → Reviewer review/return → Academic Registrar approval → publication. It does not yet model the Department Committee, Faculty Board of Examiners, Senate confirmation, or provisional publication.
+
+The publicly available MUST Examination Regulations and Policies (2023), sections 2.5.1–2.5.5, specify:
+- the Department Committee considers coursework and examination results and submits them with meeting minutes to the Faculty Board;
+- the Faculty Board vets and approves results, after which results are provisional and may be published provisionally;
+- the University Senate confirms and approves the Faculty Board results; and
+- the Academic Registrar receives the Senate submission one week before the meeting, with the Dean's signature and Faculty Board minutes, and the student portal is a publication avenue.
+
+The 2023 regulations also require at least 80% attendance, completed coursework as stipulated, and payment of University dues for examination eligibility. The current application calculates attendance only; it has no authoritative fees/dues integration.
+
+MUST's official website also lists an approved Examination Management Policy 2025. Its document download could not be retrieved during this audit, so the 2023 workflow is a verified baseline, not confirmation that no 2025 amendments exist. Before building the multi-stage workflow, compare the 2025 policy and confirm the responsible user roles, meeting-minute/signature evidence, provisional publication permissions, and Senate finalisation process.
+
 ## Security and release status
 
 The Supabase project has RLS enabled on its application tables and uses protected workflow functions for marks submission, review, resubmission, access administration and publication. These functions must retain their internal role, assignment and workflow-state checks.
