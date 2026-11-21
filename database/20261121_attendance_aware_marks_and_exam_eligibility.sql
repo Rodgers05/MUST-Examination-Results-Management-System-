@@ -41,7 +41,11 @@ $function$;
 REVOKE ALL ON FUNCTION private.student_attendance_eligible(uuid, uuid)
   FROM PUBLIC, anon, authenticated;
 
-CREATE OR REPLACE FUNCTION public.get_assigned_offering_student_roster(p_offering_id uuid)
+-- PostgreSQL cannot change a RETURNS TABLE output-column name with CREATE OR REPLACE.
+-- No database objects depend on this RPC signature; recreate it with the new column name.
+DROP FUNCTION IF EXISTS public.get_assigned_offering_student_roster(uuid);
+
+CREATE FUNCTION public.get_assigned_offering_student_roster(p_offering_id uuid)
 RETURNS TABLE (
   student_id uuid,
   full_name text,
