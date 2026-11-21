@@ -40,7 +40,7 @@ test('attendance migration and lecturer UI share the same examination eligibilit
   assert.match(migration, /attendance\.recorded = attendance\.sessions/)
   assert.match(migration, /attendance\.present::numeric[\s\S]*?>= 0\.80/)
   assert.match(migration, /DROP FUNCTION IF EXISTS public\.get_assigned_offering_student_roster\(uuid\);[\s\S]*?CREATE FUNCTION public\.get_assigned_offering_student_roster/)
-  assert.match(migration, /GRANT EXECUTE ON FUNCTION public\\.get_assigned_offering_student_roster\\(uuid\\)[\\s\\S]*?TO authenticated, service_role/)
+  assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.get_assigned_offering_student_roster\(uuid\)[\s\S]*?TO authenticated, service_role/)
   assert.match(migration, /attendance_eligible boolean/)
   assert.match(migration, /a\.assessment_type <> 'EXAM'[\s\S]*?private\.student_attendance_eligible/)
   assert.match(migration, /existing examination mark belongs to a student who no longer meets the attendance rule/)
