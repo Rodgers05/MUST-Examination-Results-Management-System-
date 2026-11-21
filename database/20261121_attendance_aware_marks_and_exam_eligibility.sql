@@ -61,6 +61,7 @@ DECLARE
   v_role text := private.current_role();
 BEGIN
   IF auth.uid() IS NULL
+     OR v_role IS NULL
      OR v_role NOT IN ('ADMIN', 'LECTURER', 'REVIEWER', 'REGISTRAR') THEN
     RAISE EXCEPTION 'An authorised academic staff account is required'
       USING errcode = '42501';
@@ -130,7 +131,7 @@ DECLARE
   v_distinct_count integer;
   v_saved_count integer;
 BEGIN
-  IF v_user_id IS NULL OR private.current_role() <> 'LECTURER' THEN
+  IF v_user_id IS NULL OR private.current_role() IS DISTINCT FROM 'LECTURER' THEN
     RAISE EXCEPTION 'An active lecturer account is required'
       USING errcode = '42501';
   END IF;
@@ -140,7 +141,7 @@ BEGIN
       USING errcode = '42501';
   END IF;
 
-  IF jsonb_typeof(p_marks) <> 'array' THEN
+  IF p_marks IS NULL OR jsonb_typeof(p_marks) <> 'array' THEN
     RAISE EXCEPTION 'Marks must be submitted as an array'
       USING errcode = '22023';
   END IF;
