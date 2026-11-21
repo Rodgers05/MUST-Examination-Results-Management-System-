@@ -94,94 +94,136 @@ The application now validates registration, sign-in and confirmation-resend emai
 - Review and apply database migrations deliberately; a migration file committed to Git is **not** automatically applied to Supabase unless the migration workflow is explicitly run.
 - Keep production database backups and review RLS policies whenever tables, RPCs or role permissions change.
 
-## Security and release status
+## Live production and security audit — 21 November 2026
 
-The Supabase project has RLS enabled on its application tables and uses protected workflow functions for marks submission, review, resubmission, access administration and publication. These functions must retain their internal role, assignment and workflow-state checks.
+### Production release
 
-Known release checks that still require completion are tracked during deployment and testing:
+The latest application release remains deployed to both existing Vercel production projects:
 
-- Verify email confirmation and SMTP delivery end to end.
-- Confirm Google OAuth provider credentials and callback behaviour.
-- Review and apply the pending email-verification hardening migration (PR #8) before relying on strict email ownership verification; confirm SMTP delivery first and plan re-verification for existing active-but-unconfirmed accounts.
-- Review the authenticated `SECURITY DEFINER` RPC warnings and test each role boundary; do not revoke workflow RPC execution blindly.
-- Perform end-to-end tests with dedicated ADMIN, LECTURER, REVIEWER, REGISTRAR and STUDENT accounts, including negative permission tests.
-- Validate marks calculations, submission state transitions, publication and student result isolation using approved test records.
-- Confirm backup/restore, monitoring, audit retention and university sign-off before real institutional use.
+| Project | Production deployment | Commit |
+|---|---|---|
+| `must-exam-results` | `dpl_2K55XYMUfvsb84PMHaFwwNnvNPxt` | `517155f6c20666574db4447c4c3ed26d411f7e05` |
+| `mustexaminationresultsmanagementsystem` | `dpl_CG3WHrZdL2LkpVystAgfXGAVahWy` | `517155f6c20666574db4447c4c3ed26d411f7e05` |
 
-Supabase leaked-password protection may require a higher subscription tier. Where unavailable, retain strong password rules, secure reset flows, rate limiting and monitoring; document the plan limitation rather than claiming that breached-password screening is enabled.
+Use the verified direct production URL:
 
-## Legacy prototype
+**https://mustexaminationresultsmanagementsys.vercel.app**
 
-The previous Express/MySQL implementation and its scripts are retained only as a reference. It is not the live Next.js/Supabase application. Do not use legacy demo credentials or seed data in the production system.
+The other alias, `must-exam-results.vercel.app`, currently redirects to `must-results.is-a.dev`, which Vercel reports as unverified. Do not use that redirecting alias as the canonical URL.
 
+The main branch has advanced with documentation-only commits after the deployed application release. The production application commit remains `517155f6c20666574db4447c4c3ed26d411f7e05`; no application code from draft PRs #16–#18 has been merged or deployed.
 
-## Release verification (2026-11-20)
+### What is implemented in the deployed application layer
 
-### Current production application release
+- MUST institutional-domain validation in registration, password sign-in, confirmation resend and Google OAuth callback.
+- A protected-workspace gate requiring an active profile with `email_verified = true`.
+- Role-specific dashboard navigation and course-assignment checks.
+- Lecturer course selection, enrolled-student roster, per-course assessment entry and atomic batch-mark RPC.
+- Assessment-weight editing UI and raw-mark preservation logic.
+- Reviewer/Registrar result review, return, approval and publication actions.
+- Shared desktop/mobile navigation with logout controls.
+- Help/support entry points and links to MUST.
 
-The current application release is commit `517155f6c20666574db4447c4c3ed26d411f7e05` (PR [#14 — Enforce MUST email verification in login and OAuth callback](https://github.com/Rodgers05/MUST-Examination-Results-Management-System-/pull/14)).
+These are application-layer implementations, not proof that every workflow succeeds against the current production database. The read-only database audit below found permission and policy mismatches that block several actions.
 
-The PR's full quality workflow passed dependency advisories, ESLint, TypeScript, all 14 automated tests and the Next.js production build. Both existing Vercel projects report **READY** on the **production** target for this exact commit:
-- `must-exam-results`: deployment `dpl_2K55XYMUfvsb84PMHaFwwNnvNPxt`; alias `https://must-exam-results.vercel.app`.
-- `mustexaminationresultsmanagementsystem`: deployment `dpl_CG3WHrZdL2LkpVystAgfXGAVahWy`; alias `https://mustexaminationresultsmanagementsys.vercel.app`.
+### Current production database findings
 
-**URL routing caveat:** the first alias is verified by Vercel but has a 307 redirect to `must-results.is-a.dev`, which Vercel still reports as unverified. The second alias is verified and has no redirect, so it is the direct fallback URL. The custom domains `must-results.is-a.dev` and `portal.mustresultsnomaclcloudsonline.aclclouds.online` are not verified. Do not treat preview URLs as production URLs.
+**Identity and account verification**
 
-### Test coverage boundary
+- 20 profiles exist: 13 active profiles use non-MUST email domains and 7 use MUST domains.
+- Of the 7 MUST-domain profiles, 5 have `email_verified = true` and 2 are unverified.
+- 16 Auth users have `email_confirmed_at`; 4 do not.
+- The live Auth trigger `auto_confirm_must_signup` still auto-confirms MUST-domain sign-ups.
+- The live `admin_set_user_access` RPC writes `auth.users.email_confirmed_at` and `profiles.email_verified` when an account is activated. Administrator approval can therefore manufacture an email-verification state.
+- `private.current_role()` currently checks ACTIVE status but not MUST domain, profile verification or the Auth confirmation timestamp. Since RLS policies rely on this helper, active non-MUST accounts can potentially satisfy database role checks through a direct Supabase client.
+- Existing MUST accounts may have historical confirmation timestamps created by the auto-confirm trigger. Those timestamps are not proof that the user personally verified an inbox.
 
-The production quality workflow runs `npm test` (14 Node tests under `tests/*.test.mjs`), lint, type-check and a production build. The separate legacy MySQL integration suite (`npm run test:legacy`) requires a dedicated isolated MySQL test database and `LEGACY_DEMO_PASSWORD`; it was not run because only the production Supabase project is connected and no staging project is available. Do not point the legacy suite at production.
+Draft PR #18 prepares the database identity gate. It is not applied. Legacy-account re-verification requires verified SMTP, an institutionally approved account-recovery plan and a verified break-glass administrator.
 
-### Current application behaviour
+**RLS, grants and SECURITY DEFINER functions**
 
-- Registration, password login, confirmation resend and password-reset requests validate MUST institutional domains `@must.ac.ug` and `@std.must.ac.ug` in application code.
-- Password login now requires `profiles.email_verified = true`. The Google OAuth callback now rejects non-MUST email domains and requires the same verified profile flag before redirecting to a pending or active workspace.
-- The login page exposes Google sign-in, but the Google provider credentials and a real end-to-end Google sign-in have not been verified.
-- Protected application workspaces also check the profile's `email_verified` flag and active account status.
-- Role-specific dashboard visibility is implemented for ADMIN, LECTURER, REVIEWER, REGISTRAR and STUDENT. Student published-result queries are scoped to the authenticated profile; lecturer course rosters are scoped to assigned offerings.
-- Desktop sidebar and mobile navigation both include a sign-out action.
-- The lecturer marks workspace requires the lecturer to select a course offering; only that offering's enrolled students and assessments appear. Batch saves validate the full assessment/student matrix, enrolment, duplicate rows and assessment maximums through the `save_batch_marks` database RPC.
-- Assessment weights can be corrected without changing previously entered raw marks. Weight edits are blocked while a submission is in review, approved or published; a reviewer must return the submission before corrections.
-- The current results workflow is lecturer submission → reviewer review/return → Registrar approval → publication. The additional Department Committee, Faculty Board and Senate stages have not been implemented or institutionally confirmed.
-- The current lecturer workspace explicitly treats all enrolled students as eligible for all assessment marks. The 80% attendance eligibility threshold is **not enforced** in the current application/database workflow. The roster RPC currently returns `examination_eligible = true` rather than deriving it from attendance.
-- No production result-submission or publication lifecycle has been exercised: the database currently contains zero result submissions and zero published results.
+- RLS is enabled on all 17 public application tables. The reviewed public policies are authenticated-role policies; no anonymous application policy was found.
+- The authenticated role currently has only SELECT on `assessments`, although INSERT and UPDATE RLS policies exist and the app uses direct INSERT/UPDATE.
+- `result_submissions` has an INSERT policy but the authenticated role lacks INSERT privilege, while the app uses direct INSERT.
+- `support_tickets` has an INSERT policy but the authenticated role lacks INSERT privilege, while the app uses direct INSERT.
+- `student_number` and `staff_number` are not directly updateable by authenticated users. The current administrator action attempted a direct profile update, so official identifiers may fail to save.
+- Eight SECURITY DEFINER functions in the public schema are executable by authenticated users and require continued function-by-function review; do not revoke them indiscriminately because the application uses approved RPC paths.
+- Two private trigger-only SECURITY DEFINER functions currently retain PUBLIC/anon/authenticated EXECUTE privileges. PR #18 prepares revocation after confirming they are trigger-only.
+- Supabase Security Advisor reports eight SECURITY DEFINER findings. Performance Advisor reports 17 unused indexes. Health Advisor returned no findings.
+- Leaked-password protection is disabled and needs an Auth settings review.
 
-### Read-only production database audit (2026-11-20)
+Draft PR #17 prepares narrowly scoped RLS-backed table grants and an administrator-only identifier RPC. It depends on PR #18 and has not been applied.
 
-No production data, schema, Auth setting or migration was changed during this audit.
+**Attendance and marks**
 
-| Record / control | Current result |
+- The database already enforces a complete attendance register and at least 80% presence for examination marks and result submission.
+- The current roster RPC reports every enrolled student as attendance-eligible, and the current lecturer UI therefore enables examination fields that the database trigger can reject.
+- The current atomic marks RPC expects a full assessment-by-student matrix, which does not match the attendance rule when a student is below 80%.
+- The production database currently has 0 attendance sessions and 0 attendance records. It has 5 assessments and 2 marks; both existing marks are coursework marks.
+- Draft PR #16 aligns the roster, UI, server action and atomic RPC: coursework marks remain available for enrolled students, examination marks require a complete attendance register and at least 80%, and result submission is blocked until every enrolled student meets the attendance condition.
+- This is the attendance condition only. MUST's published regulations also require stipulated coursework and payment of University dues before a candidate sits examinations. Coursework structure/marks are checked in the portal, but fee/dues clearance is not integrated with an authoritative MUST finance system.
+
+**Academic data snapshot**
+
+| Record | Current count |
 |---|---:|
-| Account records | Existing records present; reconcile against authorised MUST records |
-| Legacy email-domain state | Non-MUST records remain and require reconciliation |
-| Student/staff identifiers | Some records lack official registration or staff numbers |
-| Course-staff/profile role consistency | No current assignment-role mismatches |
-| Public application tables with RLS enabled | 17 / 17 |
-| Result submissions / published results | 0 / 0 |
-| Attendance sessions / attendance records | 0 / 0 |
+| Course offerings | 4 |
+| Enrolled student records | 7 |
+| Course-staff assignments | 2 |
+| Assessments | 5 |
+| Marks | 2 |
+| Attendance sessions | 0 |
+| Attendance records | 0 |
+| Result submissions | 0 |
+| Published results | 0 |
+| Student profiles missing registration numbers | 10 |
+| Staff profiles missing staff numbers | 10 |
 
-Existing non-MUST accounts and missing registration/staff numbers were left untouched. Do not invent or bulk-edit institutional identity data; reconcile it with authorised MUST records first.
+No real student, registration number, mark, attendance record or result has been fabricated or changed. The missing identifiers require official source data and administrator entry.
 
-### Security and authentication blockers
+### MUST approval and publication policy
 
-- The live database signup triggers currently auto-confirm and activate MUST-domain signups rather than requiring independent inbox verification and administrator approval. Non-MUST signups can also create pending profile records instead of being rejected at the database boundary.
-- Legacy non-MUST profiles remain in the production database. The database role helper checks active status but does not independently enforce the MUST institutional domain or verified-email flag for RLS policies and protected RPCs. This is a **production authorization blocker**; application-level validation alone is not sufficient.
-- The live administrator approval RPC currently sets the Auth email-confirmation timestamp and profile verification flag when activating an account. Administrator approval can therefore manufacture inbox verification instead of remaining separate from email ownership.
-- The private `current_role()` helper must require both a verified profile and an approved MUST institutional email domain before returning a role. That change must be reviewed and tested against every RLS policy and protected RPC before release.
-- PR [#11 — Require real MUST inbox verification](https://github.com/Rodgers05/MUST-Examination-Results-Management-System-/pull/11) contains a pending migration draft to remove automatic confirmation, synchronize the profile flag from Supabase Auth, and stop administrator approval from manufacturing verification. It is not merged or applied. The draft must also add and test the `current_role()` email-verification condition before it is considered release-ready.
-- Supabase security advisors report 8 authenticated-callable public `SECURITY DEFINER` functions and disabled leaked-password protection. The reviewed functions use an empty `search_path` and contain role/assignment checks, but the email-verification helper issue above must be corrected before relying on them for verified-email enforcement. Do not revoke RPC execution blindly because the application uses these functions for marks, attendance, support, review and publication.
-- The performance advisor reports 17 unused indexes; review them against real workload before removing anything. The health advisor returned no findings.
-- SMTP confirmation and password-reset delivery have not been verified with a real MUST mailbox. Auth log inspection did not provide evidence of a successful end-to-end email delivery test.
+The published MUST Examination Regulations and Policies (2023), sections 2.2–2.5, specify an 80% attendance requirement, stipulated coursework and University dues for examination eligibility; coursework is capped at 40% and the examination at 60%. Coursework must include at least two tests or one test plus an assignment/take-home test and cover at least 75% of the course. Coursework marks are to be published at least two weeks before examinations. Examiners submit scripts and signed attendance lists to the Head of Department within three weeks, and must enter/submit marks in the Information Management System within five weeks.
 
-**Do not apply the pending Auth migration or change Supabase Auth settings until SMTP delivery is proven, existing users receive a re-verification plan, and a reviewed backup/rollback procedure is ready.** The four active-but-unverified profiles and 12 legacy non-MUST profiles require authorised account reconciliation; do not delete, auto-confirm or silently reclassify them.
+The current application enforces the coursework component count and 40/60 weighting, but does not yet enforce 75% course coverage, the coursework-publication deadline, the three-/five-week submission deadlines, or signed invigilator attendance-list evidence. Those are additional policy gaps beyond the 80% attendance calculation.
 
-### Remaining institutional validation
+The 2023 regulations specify the results path:
+1. Department Committee considers coursework and examination results and submits them with meeting minutes to the Faculty Board of Examiners.
+2. Faculty Board vets and approves the results. Results may then be published provisionally.
+3. University Senate confirms and approves the Faculty Board results.
+4. The Academic Registrar receives the Senate submission at least one week before the meeting with the Dean's signature and Faculty Board minutes; final results are then published through approved channels including the student portal.
 
-1. Verify SMTP confirmation and password-reset delivery to controlled MUST mailboxes, then verify Google OAuth credentials, provider configuration and callback behaviour.
-2. Review the pending email-verification migration, add the `current_role()` email-verification condition, prepare a rollback plan and communicate the impact on legacy accounts before applying it.
-3. Complete isolated staging end-to-end tests for every stakeholder role, including negative cross-user/cross-course access tests and the administrator approval RPC.
-4. Confirm whether the 80% attendance threshold blocks examination entry, result submission or publication under the current MUST regulations; then implement and test the approved rule. Current production has no attendance sessions or records.
-5. Confirm the required Department Committee, Faculty Board, Senate and Academic Registrar approval sequence with authorised MUST stakeholders before adding or enabling those stages.
-6. Validate weighted mark calculations, review/return/resubmission/approval/publication and student result isolation using synthetic staging fixtures only.
-7. Complete backup/restore, audit-retention, monitoring, accessibility, responsive-device and formal University acceptance checks before real institutional use.
+The currently implemented application workflow is only Lecturer submission → Reviewer review/return → Academic Registrar approval → publication. It does not model Department Committee, Faculty Board, Senate, or provisional publication. The Academic Registrar is a receipt/administration step in the 2023 regulations, not a substitute for Senate approval.
 
-The system remains a student-developed academic project, not an officially certified MUST-operated information system. No real student marks or results should be entered or published until the University authorises the system and the outstanding controls are validated.
+MUST's official website also lists an approved Examination Management Policy 2025, but its document download could not be retrieved during this audit. The 2023 regulations are therefore the accessible policy baseline, not proof that no 2025 amendments exist. Obtain and compare the 2025 policy before implementing the multi-stage workflow, meeting-minute/signature requirements and provisional/final publication permissions.
+
+Official references:
+- [MUST Examination Regulations and Policies (2023)](https://www.must.ac.ug/downloads/policies/2023/EXAMINATION%20REGULATIONS%2C%20POLICIES%20AND%20GUIDELINES_new.pdf)
+- [MUST Examination Management Policy 2025 listing](https://www.must.ac.ug/download/examination-management-policy-2025/)
+
+### Current remediation branches
+
+| PR | Scope | State |
+|---|---|---|
+| [#16](https://github.com/Rodgers05/MUST-Examination-Results-Management-System-/pull/16) | Attendance-aware marks and roster RPC | Draft; latest head CI and both previews pass; staging migration not run |
+| [#17](https://github.com/Rodgers05/MUST-Examination-Results-Management-System-/pull/17) | RLS-backed write grants and admin identifier RPC | Draft; latest head CI and both previews pass; depends on #18; staging migration not run |
+| [#18](https://github.com/Rodgers05/MUST-Examination-Results-Management-System-/pull/18) | MUST-only verified identity at database boundary | Draft; CI and previews passed; staging and SMTP/OAuth validation still required |
+| [#6](https://github.com/Rodgers05/MUST-Examination-Results-Management-System-/pull/6) | Older broad workflow proposal | Legacy draft; do not merge without rework |
+
+PRs #10 and #12–#15 are merged. Obsolete duplicate PRs #7–#9 and the older database attempt #11 were closed as superseded. No PR #16–#18 migration has been applied to production.
+
+### Validation completed and still required
+
+The deployed application commit passed its dependency advisory check, lint, TypeScript check, 14 automated tests and production build. On 21 November 2026, PR #16 head `0759b703639bc62beeeff427df612852c977e35a` and PR #17 head `d5834377893b85ddf4dbcec2be5893c31921d003` passed dependency audit, lint, type-check, automated tests and production build; both Vercel previews for each branch are READY. PR #16 now safely drops and recreates the roster RPC because its `RETURNS TABLE` output-column name changed, and explicitly preserves `authenticated` and `service_role` execution grants. PR #17's administrator identifier RPC now clears the opposite identifier when a profile changes between student and staff. PR #18 head `fbb07646cabaf85b57a817662d4adefd6abe6cf9` passed its 18-test CI suite, lint, type-check and production build; both Vercel previews are READY. These are branch validations only; no remediation migration has been applied to production.
+
+Still required before production use:
+- A separate staging Supabase project and synthetic-only integration fixtures.
+- Verified SMTP confirmation and password-reset delivery using controlled MUST mailboxes.
+- Google OAuth provider, redirect and end-to-end sign-in verification in Supabase.
+- A reviewed production backup, restore test and rollback plan.
+- Migration execution and negative RLS tests on staging.
+- Full lecturer, reviewer, Department Committee, Faculty Board, Senate, Registrar and student end-to-end tests.
+- Mobile/responsive and accessibility acceptance testing.
+- Official MUST confirmation of the 2025 policy and the current approval/signature process.
+
+**Production safety:** No production schema, grants, Auth settings, student identifiers, attendance, marks, submissions or published results were changed during this audit. Do not use the current portal for real result publication until the identity gate, RLS grants, attendance alignment and institutionally approved results workflow have been validated.
