@@ -205,8 +205,8 @@ Official references:
 
 | PR | Scope | State |
 |---|---|---|
-| [#16](https://github.com/Rodgers05/MUST-Examination-Results-Management-System-/pull/16) | Attendance-aware marks and roster RPC | Draft; CI and previews must be checked on latest head; staging migration not run |
-| [#17](https://github.com/Rodgers05/MUST-Examination-Results-Management-System-/pull/17) | RLS-backed write grants and admin identifier RPC | Draft; depends on #18; staging migration not run |
+| [#16](https://github.com/Rodgers05/MUST-Examination-Results-Management-System-/pull/16) | Attendance-aware marks and roster RPC | Draft; latest head CI and both previews pass; staging migration not run |
+| [#17](https://github.com/Rodgers05/MUST-Examination-Results-Management-System-/pull/17) | RLS-backed write grants and admin identifier RPC | Draft; latest head CI and both previews pass; depends on #18; staging migration not run |
 | [#18](https://github.com/Rodgers05/MUST-Examination-Results-Management-System-/pull/18) | MUST-only verified identity at database boundary | Draft; CI and previews passed; staging and SMTP/OAuth validation still required |
 | [#6](https://github.com/Rodgers05/MUST-Examination-Results-Management-System-/pull/6) | Older broad workflow proposal | Legacy draft; do not merge without rework |
 
@@ -214,7 +214,7 @@ PRs #10 and #12–#15 are merged. Obsolete duplicate PRs #7–#9 and the older d
 
 ### Validation completed and still required
 
-The deployed application commit passed its dependency advisory check, lint, TypeScript check, 14 automated tests and production build. PR #18's current clean branch passed its CI suite (18 tests), lint, type-check and production build; both Vercel previews were READY. PR #16 and #17 have separate draft checks and preview builds; verify their latest head commits before any review decision.
+The deployed application commit passed its dependency advisory check, lint, TypeScript check, 14 automated tests and production build. On 21 November 2026, PR #16 head `0759b703639bc62beeeff427df612852c977e35a` and PR #17 head `d5834377893b85ddf4dbcec2be5893c31921d003` passed dependency audit, lint, type-check, automated tests and production build; both Vercel previews for each branch are READY. PR #16 now safely drops and recreates the roster RPC because its `RETURNS TABLE` output-column name changed, and explicitly preserves `authenticated` and `service_role` execution grants. PR #17's administrator identifier RPC now clears the opposite identifier when a profile changes between student and staff. PR #18 head `fbb07646cabaf85b57a817662d4adefd6abe6cf9` passed its 18-test CI suite, lint, type-check and production build; both Vercel previews are READY. These are branch validations only; no remediation migration has been applied to production.
 
 Still required before production use:
 - A separate staging Supabase project and synthetic-only integration fixtures.
