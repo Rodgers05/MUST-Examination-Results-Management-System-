@@ -94,6 +94,18 @@ The application now validates registration, sign-in and confirmation-resend emai
 - Review and apply database migrations deliberately; a migration file committed to Git is **not** automatically applied to Supabase unless the migration workflow is explicitly run.
 - Keep production database backups and review RLS policies whenever tables, RPCs or role permissions change.
 
+## Attendance eligibility consistency — pending change
+
+The live database still enforces a complete attendance register and at least 80% attendance for examination marks and result submission. The current lecturer UI and the latest roster/marks RPC migration temporarily report every enrolled student as examination-eligible, which does not match those database triggers. This can make the lecturer form appear ready while the database rejects examination marks or submission.
+
+A draft change is being prepared to:
+- show each enrolled student's attendance sessions, records, present count and percentage;
+- allow coursework marks for all enrolled students while disabling examination marks for students below the 80% threshold or with incomplete attendance;
+- make the atomic marks RPC require the correct assessment/student matrix; and
+- block result submission with a clear explanation until every enrolled student satisfies the existing attendance rule.
+
+This correction is not merged, deployed or applied to Supabase. It requires an isolated staging database and migration validation before release. No attendance records or marks are being altered to make tests pass.
+
 ## Security and release status
 
 The Supabase project has RLS enabled on its application tables and uses protected workflow functions for marks submission, review, resubmission, access administration and publication. These functions must retain their internal role, assignment and workflow-state checks.
