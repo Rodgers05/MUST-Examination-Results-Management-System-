@@ -26,8 +26,8 @@ test('official student and staff identifiers are changed only through an adminis
 
   assert.match(migration, /admin_set_profile_identifiers/)
   assert.match(migration, /private\.current_role\(\) IS DISTINCT FROM 'ADMIN'/)
-  assert.match(migration, /student_number = v_student_number/)
-  assert.match(migration, /staff_number = v_staff_number/)
+  assert.match(migration, /student_number = v_student_number,[\\s\\S]*?staff_number = NULL/)
+  assert.match(migration, /staff_number = v_staff_number,[\\s\\S]*?student_number = NULL/)
   assert.match(migration, /PROFILE_IDENTIFIER_UPDATED/)
   assert.match(migration, /REVOKE ALL ON FUNCTION public\.admin_set_profile_identifiers[\s\S]*?FROM PUBLIC, anon/)
   assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.admin_set_profile_identifiers[\s\S]*?TO authenticated/)
