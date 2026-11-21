@@ -35,11 +35,13 @@ test('attendance migration and lecturer UI share the same examination eligibilit
   ])
 
   assert.match(migration, /private\.student_exam_eligible/)
+  assert.match(migration, /v_role IS NULL OR v_role NOT IN/)
+  assert.match(migration, /p_marks IS NULL OR jsonb_typeof\(p_marks\) <> 'array'/)
   assert.match(migration, /attendance\.recorded = attendance\.sessions/)
   assert.match(migration, /attendance\.present::numeric[\s\S]*?>= 0\.80/)
   assert.match(migration, /examination_eligible boolean/)
   assert.match(migration, /a\.assessment_type <> 'EXAM'[\s\S]*?private\.student_exam_eligible/)
-  assert.match(migration, /Existing examination mark belongs to a student who no longer meets the attendance rule/)
+  assert.match(migration, /existing examination mark belongs to a student who no longer meets the attendance rule/)
 
   assert.match(page, /attendance_sessions: Number/)
   assert.match(page, /examination_eligible: student\.examination_eligible === true/)
