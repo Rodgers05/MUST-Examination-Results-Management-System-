@@ -183,7 +183,9 @@ No real student, registration number, mark, attendance record or result has been
 
 ### MUST approval and publication policy
 
-The published MUST Examination Regulations and Policies (2023), sections 2.3 and 2.5, specify an 80% attendance requirement, stipulated coursework and University dues for examination eligibility; coursework is capped at 40% and the examination at 60%.
+The published MUST Examination Regulations and Policies (2023), sections 2.2–2.5, specify an 80% attendance requirement, stipulated coursework and University dues for examination eligibility; coursework is capped at 40% and the examination at 60%. Coursework must include at least two tests or one test plus an assignment/take-home test and cover at least 75% of the course. Coursework marks are to be published at least two weeks before examinations. Examiners submit scripts and signed attendance lists to the Head of Department within three weeks, and must enter/submit marks in the Information Management System within five weeks.
+
+The current application enforces the coursework component count and 40/60 weighting, but does not yet enforce 75% course coverage, the coursework-publication deadline, the three-/five-week submission deadlines, or signed invigilator attendance-list evidence. Those are additional policy gaps beyond the 80% attendance calculation.
 
 The 2023 regulations specify the results path:
 1. Department Committee considers coursework and examination results and submits them with meeting minutes to the Faculty Board of Examiners.
@@ -196,7 +198,7 @@ The currently implemented application workflow is only Lecturer submission → R
 MUST's official website also lists an approved Examination Management Policy 2025, but its document download could not be retrieved during this audit. The 2023 regulations are therefore the accessible policy baseline, not proof that no 2025 amendments exist. Obtain and compare the 2025 policy before implementing the multi-stage workflow, meeting-minute/signature requirements and provisional/final publication permissions.
 
 Official references:
-- [MUST Examination Regulations and Policies (2023)](https://www.must.ac.ug/wp-content/uploads/2024/06/Examination-Regulations-and-Policies-2023.pdf)
+- [MUST Examination Regulations and Policies (2023)](https://www.must.ac.ug/downloads/policies/2023/EXAMINATION%20REGULATIONS%2C%20POLICIES%20AND%20GUIDELINES_new.pdf)
 - [MUST Examination Management Policy 2025 listing](https://www.must.ac.ug/download/examination-management-policy-2025/)
 
 ### Current remediation branches
