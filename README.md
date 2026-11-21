@@ -94,6 +94,23 @@ The application now validates registration, sign-in and confirmation-resend emai
 - Review and apply database migrations deliberately; a migration file committed to Git is **not** automatically applied to Supabase unless the migration workflow is explicitly run.
 - Keep production database backups and review RLS policies whenever tables, RPCs or role permissions change.
 
+## Verified MUST identity enforcement — pending database migration
+
+The application layer validates MUST institutional email addresses and requires a verified profile before protected workspace access. The production database does not yet enforce the same boundary: the live private.current_role() helper currently checks account status but not MUST domain or Auth email verification. Since RLS policies depend on this helper, an active non-MUST account can potentially satisfy role-based database policies through a direct Supabase client.
+
+The live Auth trigger also auto-confirms MUST sign-ups, and the current administrator access RPC writes Auth confirmation and profile verification fields when activating an account. This lets administrator approval manufacture an email-verification state instead of requiring the user to verify their own inbox.
+
+The pending database migration:
+- removes the auto-confirm trigger;
+- enforces MUST domains on Auth insert and email change;
+- creates new profiles as PENDING and derives verification only from Supabase Auth confirmation;
+- synchronizes profile verification from Auth confirmation events;
+- makes private.current_role() require an ACTIVE profile, confirmed Auth user, matching Auth/profile email, verified profile flag and a MUST institutional domain;
+- prevents administrator activation from changing email-confirmation state; and
+- revokes direct execution from trigger-only SECURITY DEFINER functions.
+
+The migration is not applied or deployed. Existing MUST accounts may have historical confirmation timestamps created by the old trigger; these timestamps do not prove that the user personally verified an inbox. A controlled legacy-account re-verification plan, verified SMTP delivery, Google OAuth configuration review, a break-glass administrator and a tested backup/rollback plan are required before production application.
+
 ## Security and release status
 
 The Supabase project has RLS enabled on its application tables and uses protected workflow functions for marks submission, review, resubmission, access administration and publication. These functions must retain their internal role, assignment and workflow-state checks.
