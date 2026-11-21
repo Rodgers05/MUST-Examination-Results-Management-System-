@@ -48,7 +48,7 @@ test('attendance migration and lecturer UI share the same examination eligibilit
   assert.match(workspace, /attendance_sessions: number/)
   assert.match(workspace, /required=\{!examIneligible\}/)
   assert.match(workspace, /disabled=\{workflowLocked \|\| examIneligible\}/)
-  assert.match(workspace, /disabled=\{!allExamEligible\}/)
+  assert.match(workspace, /disabled=\{!allAttendanceEligible\}/)
 
   assert.match(actions, /get_assigned_offering_student_roster/)
   assert.match(actions, /attendanceEligibleStudentIds/)
