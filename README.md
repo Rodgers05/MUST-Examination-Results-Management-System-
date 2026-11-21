@@ -106,7 +106,7 @@ A draft change is being prepared to:
 
 This implements the attendance condition only. The MUST 2023 regulations also require the stipulated coursework and payment of University dues before a candidate sits examinations. Coursework structure and marks are checked in the portal, but fee/dues clearance is not integrated with an authoritative MUST finance system and must remain an institutional check.
 
-This correction is not merged, deployed or applied to Supabase. It requires an isolated staging database and migration validation before release. No attendance records or marks are being altered to make tests pass.
+This correction is not merged, deployed or applied to Supabase. It requires the verified-MUST database role gate in PR #18, an isolated staging database and migration validation before release. No attendance records or marks are being altered to make tests pass.
 
 ## Security and release status
 
