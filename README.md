@@ -168,7 +168,7 @@ Draft PR #17 prepares narrowly scoped RLS-backed table grants and an administrat
 | Record | Current count |
 |---|---:|
 | Course offerings | 4 |
-| Enrolled student records | 6 |
+| Enrolled student records | 7 |
 | Course-staff assignments | 2 |
 | Assessments | 5 |
 | Marks | 2 |
@@ -176,7 +176,7 @@ Draft PR #17 prepares narrowly scoped RLS-backed table grants and an administrat
 | Attendance records | 0 |
 | Result submissions | 0 |
 | Published results | 0 |
-| Student profiles missing registration numbers | 8 |
+| Student profiles missing registration numbers | 10 |
 | Staff profiles missing staff numbers | 10 |
 
 No real student, registration number, mark, attendance record or result has been fabricated or changed. The missing identifiers require official source data and administrator entry.
