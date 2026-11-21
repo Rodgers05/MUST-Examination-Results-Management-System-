@@ -94,6 +94,19 @@ The application now validates registration, sign-in and confirmation-resend emai
 - Review and apply database migrations deliberately; a migration file committed to Git is **not** automatically applied to Supabase unless the migration workflow is explicitly run.
 - Keep production database backups and review RLS policies whenever tables, RPCs or role permissions change.
 
+## RLS-backed workflow write permissions — pending correction
+
+A read-only audit of the connected production database found that several write policies exist without the corresponding SQL table privileges. This means the application can display an action that PostgreSQL will reject before the RLS policy is evaluated:
+
+- Assessment creation and weight edits have INSERT/UPDATE policies but the authenticated role currently lacks INSERT/UPDATE table privileges.
+- Lecturer result submission has an INSERT policy but the authenticated role currently lacks INSERT privilege.
+- Help/support ticket creation has an INSERT policy but the authenticated role currently lacks INSERT privilege.
+- Student and staff identifier columns intentionally have no direct user UPDATE grant; the current administrator action attempted a direct profile update and therefore could not reliably save official identifiers.
+
+The pending migration grants only the operations already constrained by those RLS policies. Official student/staff identifiers are moved to a SECURITY DEFINER administrator RPC with role, format, uniqueness and audit checks. It does not grant broad table access or direct identifier updates to ordinary users.
+
+This migration is not applied or deployed. It must be tested on isolated staging and released only after the verified-MUST database role gate is in place. The application code and SQL migration must be deployed together; deploying only one side would leave affected actions unavailable.
+
 ## Security and release status
 
 The Supabase project has RLS enabled on its application tables and uses protected workflow functions for marks submission, review, resubmission, access administration and publication. These functions must retain their internal role, assignment and workflow-state checks.
