@@ -15,7 +15,7 @@ type Student = {
   attendance_recorded: number
   attendance_present: number
   attendance_percentage: number | null
-  examination_eligible: boolean
+  attendance_eligible: boolean
 }
 type Submission = { id: string; offering_id: string; status: string; reviewer_note: string; lecturer_note: string }
 type Mark = { assessment_id: string; student_id: string; mark: string }
@@ -51,22 +51,22 @@ export function LecturerMarksWorkspace({
         const offeringWeight = offeringAssessments.reduce((sum, item) => sum + Number(item.weight), 0)
         const offeringCoursework = offeringAssessments.filter((item) => item.assessment_type !== 'EXAM').reduce((sum, item) => sum + Number(item.weight), 0)
         const offeringExam = offeringAssessments.filter((item) => item.assessment_type === 'EXAM').reduce((sum, item) => sum + Number(item.weight), 0)
-        const allExamEligible = offeringStudents.length > 0 && offeringStudents.every((student) => student.examination_eligible)
-        const ineligibleCount = offeringStudents.filter((student) => !student.examination_eligible).length
+        const allAttendanceEligible = offeringStudents.length > 0 && offeringStudents.every((student) => student.attendance_eligible)
+        const ineligibleCount = offeringStudents.filter((student) => !student.attendance_eligible).length
         const hasMarkableAssessments = offeringAssessments.some((assessment) =>
-          assessment.assessment_type !== 'EXAM' || offeringStudents.some((student) => student.examination_eligible),
+          assessment.assessment_type !== 'EXAM' || offeringStudents.some((student) => student.attendance_eligible),
         )
         return <section key={offering.id} hidden={selectedOffering !== offering.id} aria-label={offering.label} style={{marginTop:20}}>
           <div className="selected-course-heading"><div><span className="kicker">SELECTED COURSE</span><h3>{offering.label}</h3></div><span className="tag">{offeringStudents.length} enrolled</span></div>
           <p className="subtle">Coursework: {offeringCoursework}% / 40% maximum · Examination: {offeringExam}% / 60% maximum · Total configured: {offeringWeight}%</p>
           {offeringSubmission && <p><StatusBadge value={offeringSubmission.status} /></p>}
-          {!allExamEligible && <div className="notice" role="status">Examination marks require a complete attendance register and at least 80% attendance. {ineligibleCount} enrolled student(s) do not yet meet the rule. Coursework marks can still be entered, but results cannot be submitted until every enrolled student is eligible.</div>}
+          {!allAttendanceEligible && <div className="notice" role="status">Examination mark entry requires a complete attendance register and at least 80% attendance. {ineligibleCount} enrolled student(s) do not yet meet the attendance rule. Coursework marks can still be entered, but results cannot be submitted until every enrolled student meets it. Fee/dues clearance is not connected to this portal and must be verified through the University's approved process.</div>}
           {offeringSubmission?.status === 'RETURNED' && <div className="notice error"><strong>Reviewer comment:</strong> {offeringSubmission.reviewer_note || 'Review the returned marks and correct them.'}</div>}
           {offeringAssessments.length === 0 || offeringStudents.length === 0 ? <Empty>{offeringAssessments.length === 0 ? 'No assessments have been configured for this course yet.' : 'There are no actively enrolled students in this course.'}</Empty> : <>
             <form action={saveBatchMarks}>
               <input type="hidden" name="offering_id" value={offering.id} />
               <input type="hidden" name="next_offering_id" value={offerings[(offerings.findIndex((item) => item.id === offering.id) + 1) % offerings.length]?.id ?? offering.id} />
-              <DataTable headings={['Student name', 'Registration number', 'Attendance', 'Exam eligibility', ...offeringAssessments.map((item) => item.title + ' (' + item.maximum_mark + ')')]}>
+              <DataTable headings={['Student name', 'Registration number', 'Attendance', 'Attendance threshold', ...offeringAssessments.map((item) => item.title + ' (' + item.maximum_mark + ')')]}>
                 {offeringStudents.map((student) => <tr key={student.student_id}>
                   <td><strong>{student.full_name || 'Name not available'}</strong><small className="subtle" style={{display:'block'}}>{student.institutional_email}</small></td>
                   <td><code>{student.student_number || 'Not available'}</code></td>
@@ -75,9 +75,9 @@ export function LecturerMarksWorkspace({
                     <small className="subtle" style={{display:'block'}}>Records: {student.attendance_recorded}/{student.attendance_sessions}</small>
                     <small className="subtle" style={{display:'block'}}>Rate: {student.attendance_percentage === null ? 'Not available' : student.attendance_percentage + '%'}</small>
                   </td>
-                  <td><span className={student.examination_eligible ? 'status status-success' : 'status status-warning'}>{student.examination_eligible ? 'Eligible' : 'Not eligible'}</span></td>
+                  <td><span className={student.attendance_eligible ? 'status status-success' : 'status status-warning'}>{student.attendance_eligible ? 'Meets 80% rule' : 'Below 80% or incomplete'}</span></td>
                   {offeringAssessments.map((assessment) => {
-                    const examIneligible = assessment.assessment_type === 'EXAM' && !student.examination_eligible
+                    const examIneligible = assessment.assessment_type === 'EXAM' && !student.attendance_eligible
                     const workflowLocked = Boolean(offeringSubmission && offeringSubmission.status !== 'RETURNED')
                     return <td key={assessment.id}>
                       <input
@@ -98,8 +98,8 @@ export function LecturerMarksWorkspace({
               </DataTable>
               {(!offeringSubmission || offeringSubmission.status === 'RETURNED') && <div className="actions"><button type="submit" disabled={!hasMarkableAssessments}>Save marks &amp; open next course</button></div>}
             </form>
-            {!offeringSubmission && <form action={submitResults} className="form-grid" style={{marginTop:16}}><input type="hidden" name="offering_id" value={offering.id}/><div className="field"><label>Submission note (optional)</label><input name="lecturer_note" maxLength={500}/></div><button type="submit" disabled={!allExamEligible}>Submit results for departmental review</button></form>}
-            {offeringSubmission?.status === 'RETURNED' && <form action={resubmitResults} className="form-grid" style={{marginTop:16}}><input type="hidden" name="submission_id" value={offeringSubmission.id}/><div className="field"><label>Correction note</label><input name="lecturer_note" maxLength={500} required/></div><button type="submit" disabled={!allExamEligible}>Resubmit corrected marks</button></form>}
+            {!offeringSubmission && <form action={submitResults} className="form-grid" style={{marginTop:16}}><input type="hidden" name="offering_id" value={offering.id}/><div className="field"><label>Submission note (optional)</label><input name="lecturer_note" maxLength={500}/></div><button type="submit" disabled={!allAttendanceEligible}>Submit results for departmental review</button></form>}
+            {offeringSubmission?.status === 'RETURNED' && <form action={resubmitResults} className="form-grid" style={{marginTop:16}}><input type="hidden" name="submission_id" value={offeringSubmission.id}/><div className="field"><label>Correction note</label><input name="lecturer_note" maxLength={500} required/></div><button type="submit" disabled={!allAttendanceEligible}>Resubmit corrected marks</button></form>}
             {offeringSubmission && offeringSubmission.status !== 'RETURNED' && <p className="notice">Marks are locked while this submission is being reviewed, approved or published.</p>}
           </>}
         </section>
