@@ -171,6 +171,36 @@ BEGIN
 END;
 $function$;
 
+
+-- RLS authorization must use the same verified MUST identity boundary as the app.
+-- Also compare the profile address with the Auth source of truth so a stale or
+-- mismatched profile flag cannot grant database access.
+CREATE OR REPLACE FUNCTION private.current_role()
+RETURNS text
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+  SELECT p.role
+  FROM public.profiles p
+  JOIN auth.users u ON u.id = p.id
+  WHERE p.id = (SELECT auth.uid())
+    AND p.account_status = 'ACTIVE'
+    AND p.email_verified IS TRUE
+    AND u.email_confirmed_at IS NOT NULL
+    AND lower(btrim(coalesce(u.email, ''))) = lower(btrim(coalesce(p.institutional_email, '')))
+    AND lower(split_part(btrim(coalesce(u.email, '')), '@', 2)) IN ('must.ac.ug', 'std.must.ac.ug')
+  LIMIT 1
+$function$;
+
+-- These functions are trigger-only. They must not be directly executable
+-- through PostgREST or by arbitrary SQL callers.
+REVOKE ALL ON FUNCTION private.enforce_must_auth_email() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION private.sync_profile_email_verification() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION private.audit_enrollment_change() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION private.enforce_exam_mark_attendance_eligibility() FROM PUBLIC, anon, authenticated;
+
 COMMIT;
 
 -- OPERATIONAL FOLLOW-UP (not part of this migration):
