@@ -57,7 +57,7 @@ export default async function LecturerMarksPage({ searchParams }: { searchParams
       attendance_recorded: Number(student.attendance_recorded ?? 0),
       attendance_present: Number(student.attendance_present ?? 0),
       attendance_percentage: student.attendance_percentage == null ? null : Number(student.attendance_percentage),
-      examination_eligible: student.examination_eligible === true,
+      attendance_eligible: student.attendance_eligible === true,
     })),
   ]))
   const hasError = Boolean(assignmentError || offeringResult.error || assessmentResult.error || enrollmentResult.error || submissionResult.error || rosterResponses.some((response) => response.error) || coursesResult.error || semestersResult.error || marksResult.error)
