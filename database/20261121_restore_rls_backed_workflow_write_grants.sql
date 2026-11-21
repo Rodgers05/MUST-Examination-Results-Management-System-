@@ -69,6 +69,7 @@ BEGIN
 
     UPDATE public.profiles
     SET student_number = v_student_number,
+        staff_number = NULL,
         updated_at = now()
     WHERE id = p_user_id;
     v_identifier_type := 'STUDENT_REGISTRATION';
@@ -92,6 +93,7 @@ BEGIN
 
     UPDATE public.profiles
     SET staff_number = v_staff_number,
+        student_number = NULL,
         updated_at = now()
     WHERE id = p_user_id;
     v_identifier_type := 'STAFF_NUMBER';
