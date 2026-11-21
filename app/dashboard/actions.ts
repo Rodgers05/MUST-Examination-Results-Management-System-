@@ -148,13 +148,16 @@ export async function setUserAccess(form: FormData) {
   const { error } = await supabase.rpc('admin_set_user_access', { p_user_id: userId, p_role: role, p_status: status })
   if (error) say('The database rejected the access change. Confirm your administrator access and selection.')
   const identifierUpdate = role === 'STUDENT' && studentNumber
-    ? { student_number: studentNumber }
+    ? { p_student_number: studentNumber, p_staff_number: null }
     : role !== 'STUDENT' && staffNumber
-      ? { staff_number: staffNumber }
+      ? { p_student_number: null, p_staff_number: staffNumber }
       : null
   if (identifierUpdate) {
-    const { error: identifierError } = await supabase.from('profiles').update(identifierUpdate).eq('id', userId)
-    if (identifierError) say('Access was updated, but the identifier could not be saved. Check the number and try again.')
+    const { error: identifierError } = await supabase.rpc('admin_set_profile_identifiers', {
+      p_user_id: userId,
+      ...identifierUpdate,
+    })
+    if (identifierError) say('Access was updated, but the official identifier could not be saved. Check the number, account role and duplicate assignments.')
   }
   revalidatePath('/dashboard')
   revalidatePath('/dashboard/profile')
