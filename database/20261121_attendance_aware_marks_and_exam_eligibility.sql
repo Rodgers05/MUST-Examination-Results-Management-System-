@@ -116,7 +116,7 @@ $function$;
 REVOKE ALL ON FUNCTION public.get_assigned_offering_student_roster(uuid)
   FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.get_assigned_offering_student_roster(uuid)
-  TO authenticated;
+  TO authenticated, service_role;
 
 CREATE OR REPLACE FUNCTION public.save_batch_marks(p_offering_id uuid, p_marks jsonb)
 RETURNS integer
