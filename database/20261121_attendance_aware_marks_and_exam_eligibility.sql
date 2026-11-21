@@ -6,7 +6,7 @@
 
 BEGIN;
 
-CREATE OR REPLACE FUNCTION private.student_exam_eligible(
+CREATE OR REPLACE FUNCTION private.student_attendance_eligible(
   p_offering_id uuid,
   p_student_id uuid
 )
@@ -38,7 +38,7 @@ AS $function$
   FROM attendance
 $function$;
 
-REVOKE ALL ON FUNCTION private.student_exam_eligible(uuid, uuid)
+REVOKE ALL ON FUNCTION private.student_attendance_eligible(uuid, uuid)
   FROM PUBLIC, anon, authenticated;
 
 CREATE OR REPLACE FUNCTION public.get_assigned_offering_student_roster(p_offering_id uuid)
@@ -51,7 +51,7 @@ RETURNS TABLE (
   attendance_recorded integer,
   attendance_present integer,
   attendance_percentage numeric,
-  examination_eligible boolean
+  attendance_eligible boolean
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -87,7 +87,7 @@ BEGIN
         THEN round(attendance.present::numeric * 100 / attendance.sessions::numeric, 2)
       ELSE NULL
     END,
-    private.student_exam_eligible(e.offering_id, e.student_id)
+    private.student_attendance_eligible(e.offering_id, e.student_id)
   FROM public.enrollments e
   JOIN public.profiles p ON p.id = e.student_id
   CROSS JOIN LATERAL (
@@ -173,7 +173,7 @@ BEGIN
   FROM public.enrollments e
   WHERE e.offering_id = p_offering_id
     AND e.enrollment_status = 'ENROLLED'
-    AND private.student_exam_eligible(p_offering_id, e.student_id);
+    AND private.student_attendance_eligible(p_offering_id, e.student_id);
 
   IF v_assessment_count = 0 OR v_enrolled_count = 0 THEN
     RAISE EXCEPTION 'Configure assessments and active student enrolments before entering marks'
@@ -191,7 +191,7 @@ BEGIN
   WHERE a.offering_id = p_offering_id
     AND (
       a.assessment_type <> 'EXAM'
-      OR private.student_exam_eligible(p_offering_id, e.student_id)
+      OR private.student_attendance_eligible(p_offering_id, e.student_id)
     );
 
   IF v_expected_count = 0 THEN
@@ -232,7 +232,7 @@ BEGIN
        OR i.mark > a.maximum_mark
        OR (
          a.assessment_type = 'EXAM'
-         AND NOT private.student_exam_eligible(p_offering_id, i.student_id)
+         AND NOT private.student_attendance_eligible(p_offering_id, i.student_id)
        )
   ) THEN
     RAISE EXCEPTION 'A mark references an unassigned assessment, non-enrolled student, invalid mark or examination-ineligible student'
@@ -251,7 +251,7 @@ BEGIN
      AND e.enrollment_status = 'ENROLLED'
     WHERE a.offering_id = p_offering_id
       AND a.assessment_type = 'EXAM'
-      AND NOT private.student_exam_eligible(p_offering_id, e.student_id)
+      AND NOT private.student_attendance_eligible(p_offering_id, e.student_id)
   ) THEN
     RAISE EXCEPTION 'An existing examination mark belongs to a student who no longer meets the attendance rule. Review that record before saving.'
       USING errcode = '23514';
