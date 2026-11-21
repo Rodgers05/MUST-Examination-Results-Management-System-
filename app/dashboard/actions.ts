@@ -273,6 +273,7 @@ export async function saveBatchMarks(form: FormData) {
 
   const { assessments, enrollments, error } = await offeringRows(supabase, offeringId)
   if (error) say('Could not verify assessments and enrolments for this course.')
+  const enrolledIds = new Set(enrollments.map((student) => student.student_id))
   const { data: rosterData, error: rosterError } = await supabase.rpc(
     'get_assigned_offering_student_roster',
     { p_offering_id: offeringId },
