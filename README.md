@@ -111,7 +111,7 @@ Use the verified direct production URL:
 
 The other alias, `must-exam-results.vercel.app`, currently redirects to `must-results.is-a.dev`, which Vercel reports as unverified. Do not use that redirecting alias as the canonical URL.
 
-The latest main-branch commit after the application release is `1d8110c` and contains README/documentation changes only. It is not the deployed application commit. No application code from draft PRs #16–#18 has been merged or deployed.
+The main branch has advanced with documentation-only commits after the deployed application release. The production application commit remains `517155f6c20666574db4447c4c3ed26d411f7e05`; no application code from draft PRs #16–#18 has been merged or deployed.
 
 ### What is implemented in the deployed application layer
 
