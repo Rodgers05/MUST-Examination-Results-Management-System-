@@ -163,7 +163,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     const found = profiles.find((item) => uid(item) === idValue)
     return found ? text(found, 'full_name') : idValue
   }
-  const studentNumber = (idValue: string) => text(rosterByStudent.get(idValue) ?? {}, 'student_number') || 'Not recorded'
   const currentOffering = (idValue: string) => offerings.find((item) => uid(item) === idValue)
   const offeringText = (idValue: string) => {
     const found = currentOffering(idValue)

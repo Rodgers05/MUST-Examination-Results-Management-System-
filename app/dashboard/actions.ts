@@ -38,6 +38,24 @@ async function requireCompleteOffering(supabase: Awaited<ReturnType<typeof creat
   if (error) return 'Could not verify this course offering.'
   if (!assessments.length) return 'Configure at least one assessment before submitting results.'
   if (!enrollments.length) return 'There are no enrolled students in this course offering.'
+
+  const { data: rosterData, error: rosterError } = await supabase.rpc(
+    'get_assigned_offering_student_roster',
+    { p_offering_id: offeringId },
+  )
+  if (rosterError || !Array.isArray(rosterData) || rosterData.length !== enrollments.length) {
+    return 'Could not verify the attendance register for every enrolled student.'
+  }
+  const roster = rosterData as { student_id: string; attendance_eligible: boolean }[]
+  const eligibleRosterIds = new Set(roster.map((student) => student.student_id))
+  if (enrollments.some((student) => !eligibleRosterIds.has(student.student_id))) {
+    return 'Could not match the attendance register to every enrolled student.'
+  }
+  const ineligibleCount = roster.filter((student) => student.attendance_eligible !== true).length
+  if (ineligibleCount > 0) {
+    return 'Results cannot be submitted yet. Every enrolled student must have a complete attendance register and at least 80% attendance.'
+  }
+
   const weight = assessments.reduce((sum, item) => sum + Number(item.weight), 0)
   const coursework = assessments.filter((item) => item.assessment_type !== 'EXAM')
   const exams = assessments.filter((item) => item.assessment_type === 'EXAM')
@@ -56,7 +74,7 @@ async function requireCompleteOffering(supabase: Awaited<ReturnType<typeof creat
   for (const student of enrollments) {
     for (const assessment of assessments) {
       if (!complete.has(assessment.id + ':' + student.student_id)) {
-        return 'Every enrolled student needs a mark for every configured assessment, including the examination.'
+        return 'Every enrolled student needs a mark for every configured assessment before results can be submitted.'
       }
     }
   }
@@ -256,11 +274,28 @@ export async function saveBatchMarks(form: FormData) {
   const { assessments, enrollments, error } = await offeringRows(supabase, offeringId)
   if (error) say('Could not verify assessments and enrolments for this course.')
   const enrolledIds = new Set(enrollments.map((student) => student.student_id))
+  const { data: rosterData, error: rosterError } = await supabase.rpc(
+    'get_assigned_offering_student_roster',
+    { p_offering_id: offeringId },
+  )
+  if (rosterError || !Array.isArray(rosterData) || rosterData.length !== enrolledIds.size) {
+    say('Could not verify attendance eligibility for every enrolled student.')
+  }
+  const roster = rosterData as { student_id: string; attendance_eligible: boolean }[]
+  const rosterIds = new Set(roster.map((student) => student.student_id))
+  if ([...enrolledIds].some((studentId) => !rosterIds.has(studentId))) {
+    say('Could not match the attendance register to every enrolled student.')
+  }
+  const attendanceEligibleStudentIds = new Set(
+    roster.filter((student) => student.attendance_eligible === true).map((student) => student.student_id),
+  )
   const assessmentById = new Map(assessments.map((assessment) => [assessment.id, assessment]))
   const expected = new Set<string>()
   for (const assessment of assessments) {
     for (const studentId of enrolledIds) {
-      expected.add(assessment.id + ':' + studentId)
+      if (assessment.assessment_type !== 'EXAM' || attendanceEligibleStudentIds.has(studentId)) {
+        expected.add(assessment.id + ':' + studentId)
+      }
     }
   }
 
@@ -275,12 +310,17 @@ export async function saveBatchMarks(form: FormData) {
     const assessment = assessmentById.get(assessmentId)
     const key = assessmentId + ':' + studentId
     if (!validId(assessmentId) || !validId(studentId) || !assessment || !enrolledIds.has(studentId)) return say('A mark references a student or assessment outside this assigned course.')
+    if (assessment.assessment_type === 'EXAM' && !attendanceEligibleStudentIds.has(studentId)) {
+      say('Examination marks require a complete attendance register and at least 80% attendance.')
+    }
     if (!Number.isFinite(mark) || mark < 0 || mark > Number(assessment.maximum_mark)) say('A mark is outside the allowed assessment maximum.')
     if (!expected.has(key) || seen.has(key)) say('The batch contains a duplicate or unexpected student-assessment row.')
     seen.add(key)
     validatedMarks.push({ assessment_id: assessmentId, student_id: studentId, mark })
   }
-  if (seen.size !== expected.size) say('Enter a mark for every configured assessment for every enrolled student before saving.')
+  if (seen.size !== expected.size) {
+    say('Enter every coursework mark for enrolled students and examination marks only for students who meet the 80% attendance rule.')
+  }
 
   const { error: saveError } = await supabase.rpc('save_batch_marks', {
     p_offering_id: offeringId,

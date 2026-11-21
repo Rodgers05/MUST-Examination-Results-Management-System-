@@ -53,6 +53,11 @@ export default async function LecturerMarksPage({ searchParams }: { searchParams
       full_name: value(student, 'full_name'),
       student_number: value(student, 'student_number'),
       institutional_email: value(student, 'institutional_email'),
+      attendance_sessions: Number(student.attendance_sessions ?? 0),
+      attendance_recorded: Number(student.attendance_recorded ?? 0),
+      attendance_present: Number(student.attendance_present ?? 0),
+      attendance_percentage: student.attendance_percentage == null ? null : Number(student.attendance_percentage),
+      attendance_eligible: student.attendance_eligible === true,
     })),
   ]))
   const hasError = Boolean(assignmentError || offeringResult.error || assessmentResult.error || enrollmentResult.error || submissionResult.error || rosterResponses.some((response) => response.error) || coursesResult.error || semestersResult.error || marksResult.error)
@@ -62,7 +67,7 @@ export default async function LecturerMarksPage({ searchParams }: { searchParams
       <section className="welcome"><div><div className="kicker">LECTURER WORKSPACE</div><h1>Marks and assessment entry</h1><p>Choose the course you are working on. The marks table will load only for that selected course.</p></div><span className="tag">MY COURSES</span></section>
       {notice && <div className="notice" role="status">{notice}</div>}
       {hasError && <div className="notice error" role="alert">Some course details did not load. Refresh the page before entering marks.</div>}
-      <section className="notice"><strong>Marks eligibility:</strong> Every student actively enrolled in the selected course is eligible to receive marks for all configured assessments, including the examination. Attendance does not block marks entry. Assessment weighting and mark maximums are still validated.</section>
+      <section className="notice"><strong>Marks eligibility:</strong> Coursework marks can be entered for every actively enrolled student. Examination marks require a complete attendance register and at least 80% attendance. Results cannot be submitted until every enrolled student meets that attendance rule.</section>
       <Card title="Assessment setup" note="Configure coursework and examination assessments separately for each assigned course. Assessment weights must total 100% before results can be submitted.">
         <form action={createAssessment} className="form-grid">
           <div className="field"><label>Assigned course</label><select name="offering_id" required defaultValue=""><option value="" disabled>Select course offering</option>{offerings.map((item) => <option key={id(item)} value={id(item)}>{offeringLabel(item)}</option>)}</select></div>
